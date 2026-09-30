@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="hu" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fonte Viva Beszerzési Központ</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side" id="side"></aside>
+  <div class="main">
+    <header class="top">
+      <h2 id="topTitle">Irányítópult</h2>
+      <span class="demo-badge">KATTINTHATÓ DEMÓ</span>
+      <div class="search">
+        <span id="searchIc"></span>
+        <input id="gsearch" placeholder="Keresés azonosító, tárgy vagy beszállító alapján" autocomplete="off">
+        <kbd>Ctrl K</kbd>
+        <div class="sres" id="sres" hidden></div>
+      </div>
+      <button class="icon-btn" data-a="theme" title="Világos / sötét téma" aria-label="Téma váltása"></button>
+      <div class="userbox">
+        <button class="user" data-a="userMenu" id="userChip"></button>
+        <div class="umenu" id="umenu" hidden></div>
+      </div>
+    </header>
+    <main id="view"></main>
+  </div>
+</div>
+<div id="drawerWrap"></div>
+<div id="modalWrap"></div>
+<div id="toasts" aria-live="polite"></div>
+<script src="js/core.js"></script>
+<script src="js/rules.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/views.js"></script>
+<script src="js/drawer.js"></script>
+<script src="js/modals.js"></script>
+<script src="js/actions.js"></script>
+</body>
+</html>
