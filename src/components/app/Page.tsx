@@ -14,7 +14,7 @@ export function PageHead({ kicker, title, sub, actions }: { kicker?: string; tit
   )
 }
 export function Panel({ className, children, i = 1 }: { className?: string; children: ReactNode; i?: number }) {
-  return <section className={cn('rise rounded-[28px] bg-card lift', className)} style={{ ['--i' as string]: i }}>{children}</section>
+  return <section className={cn('rise rounded-xl bg-card lift', className)} style={{ ['--i' as string]: i }}>{children}</section>
 }
 export function PanelHead({ title, sub, right }: { title: string; sub?: string; right?: ReactNode }) {
   return (

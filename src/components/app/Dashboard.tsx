@@ -8,8 +8,8 @@ import { Empty, PageHead, Panel, PanelHead } from './Page'
 
 function Kpi({ i, tone, label, value, sub, icon }: { i: number; tone: string; label: string; value: string | number; sub: string; icon: React.ReactNode }) {
   return (
-    <div className={cn('rise lift-hover relative overflow-hidden rounded-[28px] p-5', tone)} style={{ ['--i' as string]: i }}>
-      <div className="absolute -right-8 -top-8 size-28 rounded-full bg-white/30 dark:bg-white/10" />
+    <div className={cn('rise lift-hover relative overflow-hidden rounded-xl p-5', tone)} style={{ ['--i' as string]: i }}>
+      <div className="hidden" />
       <div className="absolute right-4 top-4 grid size-10 place-items-center rounded-2xl bg-white/55 dark:bg-white/15">{icon}</div>
       <div className="pr-12 text-sm font-semibold opacity-80">{label}</div>
       <div className="font-display mt-4 whitespace-nowrap text-[clamp(1.9rem,2.5vw,2.7rem)] font-extrabold leading-none tracking-tight">{value}</div>
@@ -27,7 +27,7 @@ function Pipeline() {
         {STAGES.map((st: string[], idx: number) => {
           const list = act.filter((p: any) => p.stage === idx + 1)
           return (
-            <div key={st[0]} className="flex flex-col gap-2 rounded-3xl bg-muted/60 p-2">
+            <div key={st[0]} className="flex flex-col gap-2 rounded-xl bg-muted/60 p-2">
               <div className={cn('flex items-center justify-between rounded-2xl px-3 py-2', STAGE_SOFT[idx])}>
                 <div><div className="text-[10px] font-extrabold tracking-[0.14em] opacity-70">{st[0]}</div><div className="font-display font-bold leading-tight">{st[1]}</div></div>
                 <span className={cn('grid size-7 place-items-center rounded-full text-sm font-extrabold text-white', STAGE_BG[idx])}>{list.length}</span>
@@ -70,10 +70,10 @@ export function Dashboard() {
       <PageHead kicker={fDay(S.today)} title={`Szia, ${first}!`} sub="A következő döntések és határidők igényelnek figyelmet – minden lépés felelőshöz, határidőhöz és auditnaplóhoz kötött."
         actions={<><Button variant="outline" onClick={() => openDlg({ type: 'task' })}>Új feladat</Button><Button onClick={() => openDlg({ type: 'new' })}><PlusMediumIcon />Új beszerzés</Button></>} />
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Kpi i={1} tone="bg-s2-soft text-s2-ink" label="Aktív beszerzések" value={act.length} sub={`${newW} új folyamat ezen a héten`} icon={<SparklesTwoIcon className="size-5" />} />
-        <Kpi i={2} tone="bg-s3-soft text-s3-ink" label="Jóváhagyásra vár" value={pend} sub={`${mine} döntés Önnél van`} icon={<CheckIcon className="size-5" />} />
-        <Kpi i={3} tone="bg-s1-soft text-s1-ink" label="Közeli határidő / eltérés" value={near} sub={`${hiany} dokumentációs hiány`} icon={<HourglassIcon className="size-5" />} />
-        <Kpi i={4} tone="bg-s5-soft text-s5-ink" label="Aktív beszerzési érték" value={short(val)} sub={`Nettó, becsült összérték`} icon={<span className="font-display text-sm font-extrabold">Ft</span>} />
+        <Kpi i={1} tone="bg-card text-foreground lift" label="Aktív beszerzések" value={act.length} sub={`${newW} új folyamat ezen a héten`} icon={<SparklesTwoIcon className="size-5" />} />
+        <Kpi i={2} tone="bg-card text-foreground lift" label="Jóváhagyásra vár" value={pend} sub={`${mine} döntés Önnél van`} icon={<CheckIcon className="size-5" />} />
+        <Kpi i={3} tone="bg-card text-foreground lift" label="Közeli határidő / eltérés" value={near} sub={`${hiany} dokumentációs hiány`} icon={<HourglassIcon className="size-5" />} />
+        <Kpi i={4} tone="bg-card text-foreground lift" label="Aktív beszerzési érték" value={short(val)} sub={`Nettó, becsült összérték`} icon={<span className="font-display text-sm font-extrabold">Ft</span>} />
       </div>
       <Pipeline />
       <div className="grid gap-5 xl:grid-cols-[1.7fr_1fr]">
@@ -82,7 +82,7 @@ export function Dashboard() {
             right={<div className="flex rounded-full bg-muted p-1 text-sm font-semibold">{[['all', 'Összes határidő'], ['me', 'Nekem']].map(([k, l]) => <button key={k} onClick={() => setUI({ dashTab: k })} className={cn('rounded-full px-3 py-1', u.dashTab === k ? 'bg-card lift' : 'text-muted-foreground')}>{l}</button>)}</div>} />
           {todos.length === 0 ? <Empty>Nincs Önre váró teendő.</Empty> : todos.slice(0, 7).map((t: any) => (
             <button key={t.pid + t.title} onClick={() => openProc(t.pid)} className="group flex w-full items-center gap-4 border-t border-border px-6 py-3.5 text-left hover:bg-muted/50">
-              <span className={cn('grid size-11 shrink-0 place-items-center rounded-2xl', t.tone === 'warn' ? 'bg-s2-soft text-s2-ink' : t.tone === 'bad' ? 'bg-s1-soft text-s1-ink' : 'bg-s4-soft text-s4-ink')}>
+              <span className={cn('grid size-11 shrink-0 place-items-center rounded-2xl', t.tone === 'warn' ? 'bg-muted text-foreground' : t.tone === 'bad' ? 'bg-muted text-foreground' : 'bg-muted text-foreground')}>
                 {t.ic === 'check' ? <CheckIcon className="size-5" /> : t.ic === 'alert' ? <CircleExclamationIcon className="size-5" /> : <ArrowRightIcon className="size-5" />}
               </span>
               <span className="min-w-0 flex-1"><b className="block truncate">{t.title}</b><span className="block truncate text-sm text-muted-foreground">{t.sub}</span></span>
@@ -95,7 +95,7 @@ export function Dashboard() {
           <div className="flex flex-col gap-2 px-4 pb-4">
             {warns.length === 0 && <Empty>Minden szabály teljesül.</Empty>}
             {warns.slice(0, 6).map((w, i) => (
-              <button key={i} onClick={() => openProc(w.pid)} className={cn('rounded-2xl p-3 text-left text-sm', w.s === 'bad' ? 'bg-s1-soft text-s1-ink' : 'bg-s2-soft text-s2-ink')}>
+              <button key={i} onClick={() => openProc(w.pid)} className={cn('rounded-2xl p-3 text-left text-sm', w.s === 'bad' ? 'bg-muted text-foreground' : 'bg-muted text-foreground')}>
                 <span className="font-mono text-[11px] font-bold opacity-80">{w.pid}</span><span className="block font-medium leading-snug">{w.t}</span>
               </button>
             ))}

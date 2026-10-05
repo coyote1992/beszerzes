@@ -25,7 +25,7 @@ Kowalski-elvek a kódban: erős egyedi ease-out görbék (`--ease-out`, `--ease-
 
 ## Design
 
-„Forrás" – meleg krémszínű papír-alap, szilva tinta, és hat élénk, jelentéshordozó szín: **minden PROC-szakasznak saját színe van** (korall → borostyán → levélzöld → aqua → ibolya → rózsa). Ez jelenik meg a folyamat-térképen (kanban-szerű pipeline), a stepperben, a listában és a részletek fejlécében. Világos és sötét téma, mobilon alsó navigáció.
+Alap shadcn / Blode UI megjelenés: fekete-fehér-szürke, a szín csak státuszt jelöl (piros / borostyán / zöld). Világos és sötét téma, mobilon alsó navigáció.
 
 ## Amit a demó tud
 

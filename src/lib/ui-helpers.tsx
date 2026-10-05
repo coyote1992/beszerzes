@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils'
 
 export const SC = (n: number) => `s${Math.min(6, Math.max(1, n))}`
 /** Static class maps so Tailwind can see every class name */
-export const STAGE_BG = ['bg-s1', 'bg-s2', 'bg-s3', 'bg-s4', 'bg-s5', 'bg-s6']
-export const STAGE_SOFT = ['bg-s1-soft text-s1-ink', 'bg-s2-soft text-s2-ink', 'bg-s3-soft text-s3-ink', 'bg-s4-soft text-s4-ink', 'bg-s5-soft text-s5-ink', 'bg-s6-soft text-s6-ink']
+export const STAGE_BG = ['bg-primary', 'bg-primary', 'bg-primary', 'bg-primary', 'bg-primary', 'bg-primary']
+export const STAGE_SOFT = ['bg-muted text-foreground', 'bg-muted text-foreground', 'bg-muted text-foreground', 'bg-muted text-foreground', 'bg-muted text-foreground', 'bg-muted text-foreground']
 export const STAGE_TXT = ['text-s1-ink', 'text-s2-ink', 'text-s3-ink', 'text-s4-ink', 'text-s5-ink', 'text-s6-ink']
 export const stageName = (n: number) => STAGES[n - 1][1]
 
@@ -27,7 +27,7 @@ export const procTone = (p: string): Tone => (p === 'Tender' ? 'inf' : p === 'SS
 export const procName = (p: string) => (p === 'SS' ? 'Sole Source' : p)
 export const TypeChip = ({ value }: { value: number }) => { const t = typeOf(value); return <Chip tone={typeTone(t)}>{t}</Chip> }
 
-const AVC = ['bg-s1-soft text-s1-ink', 'bg-s2-soft text-s2-ink', 'bg-s3-soft text-s3-ink', 'bg-s4-soft text-s4-ink', 'bg-s5-soft text-s5-ink', 'bg-s6-soft text-s6-ink']
+const AVC = ['bg-muted text-foreground', 'bg-muted text-foreground', 'bg-muted text-foreground', 'bg-muted text-foreground', 'bg-muted text-foreground', 'bg-muted text-foreground']
 export function Person({ name, sub, size = 'sm' }: { name: string; sub?: string; size?: 'sm' | 'md' }) {
   const u = (USERS as any[]).find((x) => x.n === name)
   const idx = Math.max(0, (USERS as any[]).findIndex((x) => x.n === name)) % 6

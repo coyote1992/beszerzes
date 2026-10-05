@@ -52,7 +52,7 @@ function Item({ p, i }: { p: any; i: any }) {
   const canDecide = i.appr && i.appr.requested && i.appr.status !== 'approved' && i.appr.per.some((x: any) => x.name === S.user && (x.state === 'pending' || x.state === 'stale'))
   return (
     <div className="flex items-start gap-3 border-t border-border px-5 py-3.5 first:border-t-0">
-      <span className={cn('mt-0.5 grid size-7 shrink-0 place-items-center rounded-full', i.done ? 'bg-s3-soft text-s3-ink' : i.blocked ? 'bg-muted text-muted-foreground' : 'bg-s2-soft text-s2-ink')}>
+      <span className={cn('mt-0.5 grid size-7 shrink-0 place-items-center rounded-full', i.done ? 'bg-muted text-foreground' : i.blocked ? 'bg-muted text-muted-foreground' : 'bg-muted text-foreground')}>
         {i.done ? <CheckIcon className="size-4" /> : i.blocked ? <LockIcon className="size-3.5" /> : pending ? <HourglassIcon className="size-3.5" /> : <CircleExclamationIcon className="size-4" />}
       </span>
       <div className="min-w-0 flex-1">
@@ -85,7 +85,7 @@ function Item({ p, i }: { p: any; i: any }) {
   )
 }
 const Card = ({ title, sub, right, children, className }: { title: string; sub?: string; right?: ReactNode; children: ReactNode; className?: string }) => (
-  <section className={cn('mb-4 overflow-hidden rounded-3xl bg-card lift', className)}>
+  <section className={cn('mb-4 overflow-hidden rounded-xl bg-card lift', className)}>
     <div className="flex items-start justify-between gap-3 px-5 pb-2 pt-4"><div><h3 className="font-display text-lg font-bold">{title}</h3>{sub && <p className="text-sm text-muted-foreground">{sub}</p>}</div>{right}</div>
     {children}
   </section>
@@ -98,7 +98,7 @@ function Overview({ p }: { p: any }) {
   const Fact = ({ l, v, tone }: { l: string; v: ReactNode; tone?: string }) => <div className={cn('rounded-2xl p-3.5', tone || 'bg-muted/70')}><div className="text-[10px] font-bold uppercase tracking-wider opacity-70">{l}</div><div className="mt-1 font-semibold leading-snug">{v}</div></div>
   return (
     <>
-      <div className="mb-4 rounded-3xl bg-card p-4 lift">
+      <div className="mb-4 rounded-xl bg-card p-4 lift">
         <Stepper value={p.closed ? 6 : p.stage - 1} className="gap-2">
           {STAGES.map((s: string[], i: number) => (
             <Step key={s[0]} className="[&>[data-slot=step-label]]:mt-0">
@@ -117,7 +117,7 @@ function Overview({ p }: { p: any }) {
       </div>
       {p.nego && <div className="mb-4 flex items-center gap-3 rounded-2xl bg-s3-soft p-4 text-sm text-s3-ink"><CheckIcon className="size-5 shrink-0" /><div><b>Tényleges érték: {ft(p.nego.final)}</b> · nyertes: {p.nego.winnerName} · megtakarítás a kezdő ajánlathoz képest: <b>{ft(p.nego.saving)}</b></div></div>}
       {p.closed ? (
-        <div className={cn('mb-4 flex items-start gap-3 rounded-2xl p-4 text-sm', p.closed.failed ? 'bg-s1-soft text-s1-ink' : 'bg-s3-soft text-s3-ink')}><LockIcon className="mt-0.5 size-5 shrink-0" /><div><b>{p.closed.failed ? 'Sikertelen eljárás' : 'Lezárt beszerzés'}</b> · {fdt(p.closed.ts)} · {p.closed.by}{p.closed.reason ? ' · ' + p.closed.reason : ''}<br />A dokumentumtár zárolva. Megőrzés: szerződés lejártát követő 8 év (PO, számla: 8 év; tenderdokumentáció: 5 év).</div></div>
+        <div className={cn('mb-4 flex items-start gap-3 rounded-2xl p-4 text-sm', p.closed.failed ? 'bg-muted text-foreground' : 'bg-muted text-foreground')}><LockIcon className="mt-0.5 size-5 shrink-0" /><div><b>{p.closed.failed ? 'Sikertelen eljárás' : 'Lezárt beszerzés'}</b> · {fdt(p.closed.ts)} · {p.closed.by}{p.closed.reason ? ' · ' + p.closed.reason : ''}<br />A dokumentumtár zárolva. Megőrzés: szerződés lejártát követő 8 év (PO, számla: 8 év; tenderdokumentáció: 5 év).</div></div>
       ) : (
         <Card title={nx ? `Mi hiányzik a továbblépéshez? (PROC${p.stage} → ${nx[0]})` : 'Mi hiányzik a lezáráshoz?'} sub="Minden lépéshez tartozik felelős; ha minden zöld, továbbléphet." right={<b className="text-sm">{done}/{it.length}</b>}>
           <div className="mx-5 mb-3 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-s3 transition-[width] duration-500 ease-out" style={{ width: `${it.length ? (done / it.length) * 100 : 100}%` }} /></div>
@@ -127,7 +127,7 @@ function Overview({ p }: { p: any }) {
       <Card title="Automatikus szabályzatellenőrzés">
         <div className="pb-3">{rules(p).map((r: any, n: number) => (
           <div key={n} className="flex items-start gap-3 px-5 py-1.5 text-sm">
-            <span className={cn('mt-0.5 grid size-5 shrink-0 place-items-center rounded-full', r.s === 'ok' ? 'bg-s3-soft text-s3-ink' : r.s === 'bad' ? 'bg-s1-soft text-s1-ink' : 'bg-s2-soft text-s2-ink')}>{r.s === 'ok' ? <CheckIcon className="size-3" /> : <CircleExclamationIcon className="size-3.5" />}</span>{r.t}
+            <span className={cn('mt-0.5 grid size-5 shrink-0 place-items-center rounded-full', r.s === 'ok' ? 'bg-muted text-foreground' : r.s === 'bad' ? 'bg-muted text-foreground' : 'bg-muted text-foreground')}>{r.s === 'ok' ? <CheckIcon className="size-3" /> : <CircleExclamationIcon className="size-3.5" />}</span>{r.t}
           </div>))}</div>
       </Card>
     </>
@@ -220,7 +220,7 @@ function Mail({ p }: { p: any }) {
   const open = p.f.sent && !p.f.opened && !p.closed
   return (
     <>
-      <div className={cn('mb-4 rounded-2xl p-4 text-sm', open ? 'bg-s2-soft text-s2-ink' : 'bg-muted text-muted-foreground')}><b>arajanlat@fonteviva.hu</b> – zárt tendercsatorna. Hozzáférés kizárólag a kijelölt beszerzési adminisztrátornak, csak kiírás, bontás és értékelés időszakában. Jelenleg: <b>{open ? 'nyitott (tender folyamatban)' : 'nem használt ennél a beszerzésnél'}</b>.</div>
+      <div className={cn('mb-4 rounded-2xl p-4 text-sm', open ? 'bg-muted text-foreground' : 'bg-muted text-muted-foreground')}><b>arajanlat@fonteviva.hu</b> – zárt tendercsatorna. Hozzáférés kizárólag a kijelölt beszerzési adminisztrátornak, csak kiírás, bontás és értékelés időszakában. Jelenleg: <b>{open ? 'nyitott (tender folyamatban)' : 'nem használt ennél a beszerzésnél'}</b>.</div>
       {p.mail.length === 0 ? <Empty>Nincs levelezés.</Empty> : p.mail.slice().reverse().map((m: any, i: number) => (
         <Card key={i} title={`${m.dir === 'out' ? '↗ Kimenő' : '↙ Bejövő'}: ${m.subj}`} sub={`${fdt(m.ts)} · ${m.from} → ${m.to}`}>
           <div className="px-5 pb-4 text-sm">{m.body && <p className="mb-2 whitespace-pre-wrap">{m.body}</p>}<div className="flex flex-wrap gap-1.5">{m.att?.map((a: string) => <Chip key={a} tone="inf"><FileTextIcon className="size-3" />{m.dir === 'in' && !bidVisible(p) ? '🔒 melléklet zárolva a bontásig' : a}</Chip>)}</div></div>
@@ -259,10 +259,10 @@ export function ProcSheet() {
                 <TabsContent value="ov"><Overview p={p} /></TabsContent>
                 <TabsContent value="bids"><Bids p={p} /></TabsContent>
                 <TabsContent value="docs"><Docs p={p} /></TabsContent>
-                <TabsContent value="tasks"><div className="mb-3 text-right"><Button onClick={() => openDlg({ type: 'task', pid: p.id })}><PlusMediumIcon />Új feladat</Button></div><div className="rounded-3xl bg-card lift">{tasks.length ? tasks.map((t: any) => <TaskRow key={t.id} t={t} />) : <Empty>Ehhez a beszerzéshez még nincs feladat.</Empty>}</div></TabsContent>
+                <TabsContent value="tasks"><div className="mb-3 text-right"><Button onClick={() => openDlg({ type: 'task', pid: p.id })}><PlusMediumIcon />Új feladat</Button></div><div className="rounded-xl bg-card lift">{tasks.length ? tasks.map((t: any) => <TaskRow key={t.id} t={t} />) : <Empty>Ehhez a beszerzéshez még nincs feladat.</Empty>}</div></TabsContent>
                 <TabsContent value="appr"><Approvals p={p} /></TabsContent>
                 <TabsContent value="mail"><Mail p={p} /></TabsContent>
-                <TabsContent value="log"><div className="rounded-3xl bg-card lift"><AuditTimeline rows={auditRows(p.id, '')} showProc={false} /></div></TabsContent>
+                <TabsContent value="log"><div className="rounded-xl bg-card lift"><AuditTimeline rows={auditRows(p.id, '')} showProc={false} /></div></TabsContent>
               </div>
             </Tabs>
             <div className="flex shrink-0 items-center justify-between gap-3 bg-card px-6 py-3.5 lift">

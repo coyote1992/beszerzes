@@ -56,7 +56,7 @@ function FormDialog(p: Props) {
   }
   return (
     <Dialog open onOpenChange={(o: boolean) => { if (!o) closeDlg() }}>
-      <DialogContent className={cn('max-h-[92vh] gap-0 overflow-y-auto rounded-[28px] p-0', p.wide ? 'sm:max-w-4xl' : 'sm:max-w-xl')}>
+      <DialogContent className={cn('max-h-[92vh] gap-0 overflow-y-auto rounded-xl p-0', p.wide ? 'sm:max-w-4xl' : 'sm:max-w-xl')}>
         <DialogHeader className="px-7 pb-4 pt-7">
           {p.kicker && <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-primary">{p.kicker}</div>}
           <DialogTitle className="font-display text-3xl font-extrabold">{p.title}</DialogTitle>
@@ -77,7 +77,7 @@ function FormDialog(p: Props) {
     </Dialog>
   )
 }
-const Note = ({ tone = 'inf', children }: { tone?: 'inf' | 'warn' | 'ok' | 'bad'; children: ReactNode }) => <div className={cn('rounded-2xl p-3.5 text-sm', { inf: 'bg-s4-soft text-s4-ink', warn: 'bg-s2-soft text-s2-ink', ok: 'bg-s3-soft text-s3-ink', bad: 'bg-s1-soft text-s1-ink' }[tone])}>{children}</div>
+const Note = ({ tone = 'inf', children }: { tone?: 'inf' | 'warn' | 'ok' | 'bad'; children: ReactNode }) => <div className={cn('rounded-2xl p-3.5 text-sm', { inf: 'bg-muted text-foreground', warn: 'bg-muted text-foreground', ok: 'bg-muted text-foreground', bad: 'bg-muted text-foreground' }[tone])}>{children}</div>
 const num = C.num
 
 /* ---------------- individual dialogs ---------------- */

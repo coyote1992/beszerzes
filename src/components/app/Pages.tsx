@@ -171,7 +171,7 @@ export function Audit() {
     <>
       <PageHead kicker="Csak hozzáfűzhető eseménynapló" title="Auditnapló" sub="Minden művelet felhasználóhoz, rendszeridőhöz és tenderazonosítóhoz kötve; a bejegyzések hash-lánccal kapcsolódnak."
         actions={<><Button variant="outline" onClick={verify}><ShieldCheckIcon />Lánc ellenőrzése</Button><Button variant="outline" onClick={tamper}>{u.tamper ? 'Visszaállítás' : 'Manipuláció szimulálása'}</Button><Button variant="outline" onClick={csvExport}><FileDownloadIcon />CSV export</Button></>} />
-      {u.auditMsg && <div className={cn('pop mb-4 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium', u.auditMsg[0] === 'ok' ? 'bg-s3-soft text-s3-ink' : 'bg-s1-soft text-s1-ink')}><ShieldCheckIcon className="size-5" />{u.auditMsg[1]}</div>}
+      {u.auditMsg && <div className={cn('pop mb-4 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium', u.auditMsg[0] === 'ok' ? 'bg-muted text-foreground' : 'bg-muted text-foreground')}><ShieldCheckIcon className="size-5" />{u.auditMsg[1]}</div>}
       <Panel>
         <div className="flex flex-wrap items-center gap-2 p-4">
           <div className="min-w-56 flex-1"><Input placeholder="Keresés az eseményekben…" value={u.auditQ} onChange={(e) => setUI({ auditQ: e.target.value })} /></div>

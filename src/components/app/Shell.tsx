@@ -14,20 +14,20 @@ import { Switch } from '@/components/ui/switch'
 import { Kbd } from '@/components/ui/kbd'
 
 const NAV: { id: View; label: string; icon: typeof BookIcon; hue: string; count?: () => number }[] = [
-  { id: 'dash', label: 'Irányítópult', icon: LayoutDashboardIcon, hue: 'bg-s5-soft text-s5-ink' },
-  { id: 'procs', label: 'Beszerzések', icon: ClipboardIcon, hue: 'bg-s2-soft text-s2-ink', count: () => S.procs.filter((p: any) => !p.closed).length },
-  { id: 'appr', label: 'Jóváhagyásaim', icon: ChecklistIcon, hue: 'bg-s3-soft text-s3-ink', count: () => pendingFor(S.user).length },
-  { id: 'tasks', label: 'Feladatok', icon: TasksIcon, hue: 'bg-s4-soft text-s4-ink', count: () => S.tasks.filter((t: any) => !t.done && t.owner === S.user).length },
-  { id: 'audit', label: 'Auditnapló', icon: ClockIcon, hue: 'bg-s6-soft text-s6-ink' },
-  { id: 'policy', label: 'Szabályzat', icon: BookIcon, hue: 'bg-s1-soft text-s1-ink' },
+  { id: 'dash', label: 'Irányítópult', icon: LayoutDashboardIcon, hue: 'bg-muted text-foreground' },
+  { id: 'procs', label: 'Beszerzések', icon: ClipboardIcon, hue: 'bg-muted text-foreground', count: () => S.procs.filter((p: any) => !p.closed).length },
+  { id: 'appr', label: 'Jóváhagyásaim', icon: ChecklistIcon, hue: 'bg-muted text-foreground', count: () => pendingFor(S.user).length },
+  { id: 'tasks', label: 'Feladatok', icon: TasksIcon, hue: 'bg-muted text-foreground', count: () => S.tasks.filter((t: any) => !t.done && t.owner === S.user).length },
+  { id: 'audit', label: 'Auditnapló', icon: ClockIcon, hue: 'bg-muted text-foreground' },
+  { id: 'policy', label: 'Szabályzat', icon: BookIcon, hue: 'bg-muted text-foreground' },
 ]
 const TITLES: Record<View, string> = { dash: 'Irányítópult', procs: 'Beszerzések', appr: 'Jóváhagyásaim', tasks: 'Feladatok', audit: 'Auditnapló', policy: 'Szabályzat' }
 
 function Logo() {
   return (
     <div className="flex items-center gap-3 px-2 pb-2 pt-1">
-      <div className="relative grid size-11 place-items-center rounded-2xl text-lg font-extrabold text-white" style={{ background: 'conic-gradient(from 210deg, var(--s1), var(--s2), var(--s3), var(--s4), var(--s5), var(--s6), var(--s1))' }}>
-        <span className="absolute inset-[3px] grid place-items-center rounded-[13px] bg-card font-display text-primary">F</span>
+      <div className="relative grid size-11 place-items-center rounded-lg bg-primary text-lg font-extrabold text-primary-foreground" >
+        F
       </div>
       <div className="leading-tight">
         <div className="font-display text-lg font-extrabold tracking-tight">Fonte Viva</div>
@@ -41,7 +41,7 @@ function Sidebar() {
   const u = useUI()
   const wd = (WDN as string[])[pd(S.today).getUTCDay()]
   return (
-    <aside className="sticky top-4 hidden h-[calc(100vh-2rem)] w-[17rem] shrink-0 flex-col gap-4 rounded-[28px] bg-card p-3 lift lg:flex">
+    <aside className="sticky top-4 hidden h-[calc(100vh-2rem)] w-[17rem] shrink-0 flex-col gap-4 rounded-xl bg-card p-3 lift lg:flex">
       <Logo />
       <nav className="flex flex-col gap-1">
         {NAV.map((n) => {
@@ -56,8 +56,8 @@ function Sidebar() {
         })}
       </nav>
       <div className="mt-auto flex flex-col gap-3">
-        <div className="relative overflow-hidden rounded-3xl bg-s2-soft p-4 text-s2-ink">
-          <SunIcon className="absolute -right-3 -top-3 size-20 rotate-12 opacity-25" />
+        <div className="relative overflow-hidden rounded-xl bg-muted p-4">
+          
           <div className="text-[11px] font-bold uppercase tracking-wider opacity-80">Demó dátuma</div>
           <div className="font-display text-xl font-extrabold leading-tight">{fDay(S.today)}</div>
           <div className="text-sm capitalize opacity-80">{wd}</div>
@@ -66,7 +66,7 @@ function Sidebar() {
             <button className="rounded-xl bg-card/50 px-2 py-1.5 text-xs font-bold text-foreground hover:bg-card" onClick={() => { if (confirm('Visszaállítja a demó adatait az induló állapotra?')) { resetDemo(); setUI({ open: null, view: 'dash' }); commit() } }}>Alaphelyzet</button>
           </div>
         </div>
-        <div className="flex items-center gap-3 rounded-2xl bg-s3-soft px-3 py-2.5 text-s3-ink">
+        <div className="flex items-center gap-3 rounded-xl bg-muted px-3 py-2.5">
           <ShieldCheckIcon className="size-5 shrink-0" />
           <div className="text-xs leading-tight"><b className="block text-[13px]">Auditált munkamenet</b>Entra ID azonosítás aktív</div>
         </div>
@@ -142,9 +142,9 @@ export function Shell({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen gap-4 p-3 lg:p-4">
       <Sidebar />
       <div className="min-w-0 flex-1">
-        <header className="sticky top-3 z-30 mb-5 flex items-center gap-3 rounded-[24px] bg-card/85 px-4 py-2.5 backdrop-blur-md lift lg:top-4">
+        <header className="sticky top-3 z-30 mb-5 flex items-center gap-3 rounded-xl bg-card/85 px-4 py-2.5 backdrop-blur-md lift lg:top-4">
           <h2 className="font-display truncate text-xl font-extrabold sm:text-2xl">{TITLES[u.view]}</h2>
-          <span className="hidden rounded-full bg-s5-soft px-2.5 py-1 text-[11px] font-bold tracking-wider text-s5-ink sm:inline">KATTINTHATÓ DEMÓ</span>
+          <span className="hidden rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold tracking-wider text-muted-foreground sm:inline">KATTINTHATÓ DEMÓ</span>
           <button onClick={() => setUI({ palette: true })} aria-label="Keresés" className="ml-auto flex h-11 items-center gap-2 rounded-2xl bg-muted px-3 text-left text-sm text-muted-foreground hover:bg-accent/60 md:w-full md:max-w-md">
             <SearchMenuIcon className="size-4" /><span className="hidden flex-1 truncate md:block">Keresés azonosító, tárgy vagy beszállító alapján</span><Kbd className="hidden md:inline-flex">Ctrl K</Kbd>
           </button>
@@ -155,7 +155,7 @@ export function Shell({ children }: { children: ReactNode }) {
         </header>
         <main key={u.view} className="pb-28 lg:pb-16">{children}</main>
       </div>
-      <nav className="fixed inset-x-3 bottom-3 z-40 flex justify-between rounded-[26px] bg-card/95 p-1.5 backdrop-blur-md lift lg:hidden">
+      <nav className="fixed inset-x-3 bottom-3 z-40 flex justify-between rounded-xl bg-card/95 p-1.5 backdrop-blur-md lift lg:hidden">
         {NAV.map((n) => { const on = u.view === n.id; return (
           <button key={n.id} aria-label={n.label} onClick={() => setUI({ view: n.id, open: null })} className={cn('relative grid flex-1 place-items-center rounded-2xl py-2', on ? 'bg-accent' : '')}>
             <span className={cn('grid size-9 place-items-center rounded-xl', n.hue)}><n.icon className="size-[18px]" /></span>
