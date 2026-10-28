@@ -1,9 +1,9 @@
 import { rowToAudit } from './_lib/audit.js'
 import { access, rowToPerson } from './_lib/people.js'
-import { lists, loadRows } from './_lib/schema.js'
+import { appData, lists, loadRows } from './_lib/schema.js'
 import { json, sessionFromRequest, unauthorized } from './_lib/session.js'
 
-const parse = (r: any) => { try { return r.fields?.AppData ? { ...JSON.parse(r.fields.AppData), _sp: r.id } : null } catch { return null } }
+const parse = (r: any) => { const d = appData(r); return d ? { ...d, _sp: r.id } : null }
 
 export async function GET(request: Request) {
   const me = sessionFromRequest(request)
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     const acc = await access(me)
     if (acc.blocked) return json({ error: 'blocked' }, 403)
     const set: Record<string, unknown> = {}
-    for (const r of settings) { const id = r.fields?.AppId; if (id && id !== 'auditHead') { try { set[id] = { value: JSON.parse(r.fields.AppData), _sp: r.id } } catch { /* ignore */ } } }
+    for (const r of settings) { const id = r.fields?.AppId; if (id && id !== 'auditHead') { const v = appData(r); if (v) set[id] = { value: v, _sp: r.id } } }
     return json({
       me: { ...me, admin: acc.admin },
       procs: procs.map(parse).filter(Boolean),

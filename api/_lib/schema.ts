@@ -1,37 +1,38 @@
 // SharePoint list schema, provisioning and row <-> entity mapping.
+// Lists can be created by the app (needs the "manage" site role) or by hand in SharePoint (enough with "write").
+// Columns are matched by internal name or display name, ignoring accents, case and punctuation, and values are
+// written according to the column's real type. Only AppId/AppData are required; readable columns are optional.
 import { drive, encPath, gj, graph, GraphError, pages, site } from './graph.js'
 
 type Kind = 'text' | 'note' | 'number' | 'date' | 'datetime' | 'bool'
-type Col = { name: string; displayName: string; kind: Kind; hidden?: boolean; indexed?: boolean }
+type Col = { name: string; displayName: string; kind: Kind; hidden?: boolean; indexed?: boolean; required?: boolean }
 type ListDef = { title: string; cols: Col[] }
 
-const appCols: Col[] = [
-  { name: 'AppId', displayName: 'Alkalmazás-azonosító', kind: 'text', hidden: true, indexed: true },
-  { name: 'AppData', displayName: 'Alkalmazásadat', kind: 'note', hidden: true },
-]
 const c = (name: string, displayName: string, kind: Kind = 'text', extra: Partial<Col> = {}): Col => ({ name, displayName, kind, ...extra })
+const AppId = c('AppId', 'AppId', 'text', { hidden: true, indexed: true, required: true })
+const AppData = c('AppData', 'AppData', 'note', { hidden: true, required: true })
 const auditCols: Col[] = [
-  c('Sorszam', 'Sorszám', 'number', { indexed: true }), c('Idopont', 'Időpont', 'datetime'), c('Felhasznalo', 'Felhasználó'), c('Email', 'E-mail'),
-  c('Beszerzes', 'Beszerzés', 'text', { indexed: true }), c('EsemenyTipus', 'Típus'), c('Reszletek', 'Részletek', 'note'), c('ElozoHash', 'Előző hash'), c('Hash', 'Hash'),
+  AppData, c('Sorszam', 'Sorszám', 'number', { indexed: true }), c('Idopont', 'Időpont', 'datetime'), c('Felhasznalo', 'Felhasználó'), c('Email', 'E-mail'),
+  c('Beszerzes', 'Beszerzés', 'text', { indexed: true }), c('EsemenyTipus', 'Esemény típusa'), c('Reszletek', 'Részletek', 'note'), c('ElozoHash', 'Előző hash'), c('Hash', 'Hash'),
 ]
 
 export const LISTS: Record<string, ListDef> = {
-  proc: { title: 'Beszerzések', cols: [...appCols, c('Targy', 'Tárgy'), c('Szervezet', 'Igénylő szervezet'), c('Koltseghely', 'Költséghely'), c('Ertek', 'Becsült nettó érték (Ft)', 'number'),
-    c('Kategoria', 'Kategória'), c('Eljaras', 'Eljárás'), c('Tipus', 'Típus'), c('IFS', 'IFS-kritikus', 'bool'), c('Szakasz', 'Szakasz'), c('Statusz', 'Státusz'), c('Igenylo', 'Igénylő'),
+  proc: { title: 'Beszerzések', cols: [AppId, AppData, c('Targy', 'Tárgy'), c('Szervezet', 'Igénylő szervezet'), c('Koltseghely', 'Költséghely'), c('Ertek', 'Becsült nettó érték', 'number'),
+    c('Kategoria', 'Kategória'), c('Eljaras', 'Eljárás'), c('Tipus', 'Beszerzési típus'), c('IFS', 'IFS-kritikus', 'bool'), c('Szakasz', 'Szakasz'), c('Statusz', 'Státusz'), c('Igenylo', 'Igénylő'),
     c('Felelos', 'Felelős beszerző'), c('KovetkezoLepes', 'Következő lépés'), c('KovetkezoHatarido', 'Következő határidő', 'date'), c('KivantTeljesites', 'Kívánt teljesítés', 'date'),
-    c('AjanlatHatarido', 'Ajánlattételi határidő', 'date'), c('Szerzodestipus', 'Szerződéstípus'), c('Nyertes', 'Nyertes beszállító'), c('VegsoAr', 'Végső ár (Ft)', 'number'),
-    c('Megtakaritas', 'Megtakarítás (Ft)', 'number'), c('Lezarva', 'Lezárva', 'datetime'), c('Mappa', 'Dokumentummappa'), c('Teszt', 'Teszt', 'bool'), c('Letrehozva', 'Létrehozva', 'date')] },
-  bidder: { title: 'Ajánlattevők', cols: [...appCols, c('Beszerzes', 'Beszerzés', 'text', { indexed: true }), c('Email', 'E-mail'), c('AjanlattevoTipus', 'Típus'), c('UjBeszallito', 'Új beszállító', 'bool'),
-    c('Allapot', 'Állapot'), c('Beerkezett', 'Beérkezett', 'datetime'), c('Formai', 'Formailag megfelelő'), c('Ar', 'Nettó ár (Ft)', 'number'), c('FizetesiHatarido', 'Fizetési határidő (nap)', 'number'),
-    c('Szallitas', 'Szállítási idő (hét)', 'number'), c('Jotallas', 'Jótállás (hó)', 'number'), c('MuszakiPont', 'Műszaki pontszám', 'number')] },
-  appr: { title: 'Jóváhagyások', cols: [...appCols, c('Beszerzes', 'Beszerzés', 'text', { indexed: true }), c('JovahagyasTipus', 'Jóváhagyás típusa'), c('Kerte', 'Kérte'), c('Kerve', 'Kérve', 'datetime'),
-    c('Allapot', 'Állapot'), c('Jovahagyok', 'Jóváhagyók', 'note'), c('Dontesek', 'Döntések', 'note'), c('Dokumentum', 'Jóváhagyott dokumentum')] },
-  task: { title: 'Feladatok', cols: [...appCols, c('Leiras', 'Leírás', 'note'), c('Felelos', 'Felelős'), c('Kiosztotta', 'Kiosztotta'), c('Hatarido', 'Határidő', 'date'),
+    c('AjanlatHatarido', 'Ajánlattételi határidő', 'date'), c('Szerzodestipus', 'Szerződéstípus'), c('Nyertes', 'Nyertes beszállító'), c('VegsoAr', 'Végső ár', 'number'),
+    c('Megtakaritas', 'Megtakarítás', 'number'), c('Lezarva', 'Lezárva', 'datetime'), c('Mappa', 'Dokumentummappa', 'note'), c('Teszt', 'Teszt', 'bool'), c('Letrehozva', 'Létrehozás dátuma', 'date')] },
+  bidder: { title: 'Ajánlattevők', cols: [AppId, AppData, c('Beszerzes', 'Beszerzés', 'text', { indexed: true }), c('Email', 'E-mail'), c('AjanlattevoTipus', 'Ajánlattevő típusa'), c('UjBeszallito', 'Új beszállító', 'bool'),
+    c('Allapot', 'Állapot'), c('Beerkezett', 'Beérkezett', 'datetime'), c('Formai', 'Formailag megfelelő'), c('Ar', 'Nettó ár', 'number'), c('FizetesiHatarido', 'Fizetési határidő', 'number'),
+    c('Szallitas', 'Szállítási idő', 'number'), c('Jotallas', 'Jótállás', 'number'), c('MuszakiPont', 'Műszaki pontszám', 'number')] },
+  appr: { title: 'Jóváhagyások', cols: [AppId, AppData, c('Beszerzes', 'Beszerzés', 'text', { indexed: true }), c('JovahagyasTipus', 'Jóváhagyás típusa'), c('Kerte', 'Kérte'), c('Kerve', 'Kérve', 'datetime'),
+    c('Allapot', 'Állapot'), c('Dontesek', 'Döntések', 'note')] },
+  task: { title: 'Feladatok', cols: [AppId, AppData, c('Leiras', 'Leírás', 'note'), c('Felelos', 'Felelős'), c('Kiosztotta', 'Kiosztotta'), c('Hatarido', 'Határidő', 'date'),
     c('Beszerzes', 'Beszerzés', 'text', { indexed: true }), c('Kesz', 'Elvégezve', 'datetime')] },
-  doc: { title: 'Dokumentum-nyilvántartás', cols: [...appCols, c('Beszerzes', 'Beszerzés', 'text', { indexed: true }), c('DokTipus', 'Dokumentumtípus'), c('Verzio', 'Verzió', 'number'),
-    c('Ajanlattevo', 'Ajánlattevő'), c('Feltoltotte', 'Feltöltötte'), c('Idopont', 'Időpont', 'datetime'), c('Megjegyzes', 'Megjegyzés'), c('Fajl', 'Fájl hivatkozás')] },
-  person: { title: 'Munkatársak', cols: [...appCols, c('Email', 'E-mail', 'text', { indexed: true }), c('Beosztas', 'Beosztás'), c('Szerepkorok', 'Szerepkörök'), c('Admin', 'Adminisztrátor', 'bool'), c('Aktiv', 'Aktív', 'bool')] },
-  setting: { title: 'Beállítások', cols: [...appCols] },
+  doc: { title: 'Dokumentum-nyilvántartás', cols: [AppId, AppData, c('Beszerzes', 'Beszerzés', 'text', { indexed: true }), c('DokTipus', 'Dokumentumtípus'), c('Verzio', 'Dokumentumverzió', 'number'),
+    c('Ajanlattevo', 'Ajánlattevő'), c('Feltoltotte', 'Feltöltötte'), c('Idopont', 'Időpont', 'datetime'), c('Megjegyzes', 'Megjegyzés'), c('Fajl', 'Fájl hivatkozás', 'note')] },
+  person: { title: 'Munkatársak', cols: [AppId, AppData, c('Email', 'E-mail', 'text', { indexed: true }), c('Beosztas', 'Beosztás'), c('Szerepkorok', 'Szerepkörök'), c('Admin', 'Adminisztrátor', 'bool'), c('Aktiv', 'Aktív', 'bool')] },
+  setting: { title: 'Beállítások', cols: [AppId, AppData] },
   audit: { title: 'Auditnapló', cols: auditCols },
   auditTest: { title: 'Auditnapló – teszt', cols: auditCols },
 }
@@ -39,6 +40,10 @@ export type ListKey = keyof typeof LISTS
 
 export const ROOT_FOLDER = 'Beszerzések'
 export const TEST_FOLDER = 'Teszt beszerzések'
+
+/** "Auditnapló – teszt" == "auditnaplo-teszt" == "Auditnaplo teszt" */
+const norm = (s: string) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '')
+const KIND_HU: Record<Kind, string> = { text: 'Egysoros szöveg', note: 'Többsoros szöveg', number: 'Szám', date: 'Dátum', datetime: 'Dátum', bool: 'Igen/Nem' }
 
 function colBody(col: Col) {
   const b: any = { name: col.name, displayName: col.displayName }
@@ -52,9 +57,19 @@ function colBody(col: Col) {
   if (col.kind === 'bool') b.boolean = {}
   return b
 }
+type Actual = { name: string; kind: Kind | 'other' }
+const kindOf = (a: any): Kind | 'other' =>
+  a.text ? (a.text.allowMultipleLines ? 'note' : 'text') : a.number || a.currency ? 'number' : a.dateTime ? (a.dateTime.format === 'dateOnly' ? 'date' : 'datetime') : a.boolean ? 'bool' : 'other'
+function match(actual: any[], col: Col) {
+  const want = new Set([norm(col.name), norm(col.displayName)])
+  return actual.find((a) => a.name === col.name) || actual.find((a) => !a.readOnly && (want.has(norm(a.displayName)) || want.has(norm(a.name))))
+}
 
-let listIds: Record<string, string> | null = null
-let provisioning: Promise<Record<string, string>> | null = null
+type ListInfo = { id: string; cols: Record<string, Actual>; byInternal: Record<string, string> }
+let cache: { at: number; p: Promise<Record<string, ListInfo>> } | null = null
+let infoNow: Record<string, ListInfo> = {}
+const keyOfId = new Map<string, string>()
+const REFRESH_MS = 10 * 60_000
 
 async function ensureFolder(parentPath: string, name: string) {
   const d = await drive()
@@ -63,61 +78,101 @@ async function ensureFolder(parentPath: string, name: string) {
   if (!r.ok && r.status !== 409) throw new Error(`Folder create failed (${name}): ${r.body?.error?.message || r.status}`)
 }
 
-const NEEDS_MANAGE = 'Az alkalmazás nem tud listát létrehozni a SharePoint „Beszerzés” webhelyen (Access denied). ' +
-  'Az alkalmazás webhely-engedélyét (Sites.Selected) „write” helyett „manage” szintre kell emelni – a lépések a README „Beállítás” részében. Utána töltsd újra az oldalt.'
-/** Creating lists and columns needs the "manage" site role; "write" only covers items and files. */
-const explain = (e: unknown) => (e instanceof GraphError && e.status === 403 ? new GraphError(403, 'needs_manage', NEEDS_MANAGE) : e)
+const denied = (e: unknown) => e instanceof GraphError && (e.status === 403 || e.status === 401)
 
-async function provision(): Promise<Record<string, string>> {
+async function provision(): Promise<Record<string, ListInfo>> {
   const existing = await pages(`${site()}/lists?$select=id,displayName`)
-  const byName = new Map(existing.map((l: any) => [l.displayName, l.id as string]))
-  const ids: Record<string, string> = {}
+  let canManage = true
+  const missingLists: string[] = [], problems: string[] = []
+  const out: Record<string, ListInfo> = {}
   await Promise.all(Object.entries(LISTS).map(async ([key, def]) => {
-    let id = byName.get(def.title)
-    if (!id) {
-      const created = await gj(`${site()}/lists`, { method: 'POST', body: JSON.stringify({ displayName: def.title, list: { template: 'genericList' }, columns: def.cols.map(colBody) }) }).catch((e) => { throw explain(e) })
-      id = created.id as string
-    } else {
-      const cols = await pages(`${site()}/lists/${id}/columns?$select=name`)
-      const have = new Set(cols.map((x: any) => x.name))
-      for (const col of def.cols) if (!have.has(col.name)) await gj(`${site()}/lists/${id}/columns`, { method: 'POST', body: JSON.stringify(colBody(col)) }).catch((e) => { throw explain(e) })
+    let id: string | undefined = existing.find((l: any) => norm(l.displayName) === norm(def.title))?.id
+    if (!id && canManage) {
+      try { id = (await gj(`${site()}/lists`, { method: 'POST', body: JSON.stringify({ displayName: def.title, list: { template: 'genericList' }, columns: def.cols.map(colBody) }) })).id }
+      catch (e) { if (!denied(e)) throw e; canManage = false }
     }
-    ids[key] = id
+    if (!id) { missingLists.push(def.title); return }
+    const actual = await pages(`${site()}/lists/${id}/columns`)
+    const cols: Record<string, Actual> = {}, byInternal: Record<string, string> = {}
+    for (const col of def.cols) {
+      let a = match(actual, col)
+      if (!a && canManage) {
+        try { a = await gj(`${site()}/lists/${id}/columns`, { method: 'POST', body: JSON.stringify(colBody(col)) }) }
+        catch (e) { if (!denied(e)) throw e; canManage = false }
+      }
+      if (a) { cols[col.name] = { name: a.name, kind: kindOf(a) }; byInternal[a.name] = col.name }
+      if (col.required && !a) problems.push(`„${def.title}” listában hiányzik a(z) „${col.name}” oszlop (${KIND_HU[col.kind]})`)
+      else if (col.required && cols[col.name].kind !== col.kind) problems.push(`„${def.title}” listában a(z) „${col.name}” oszlop típusa legyen ${KIND_HU[col.kind]}`)
+    }
+    out[key] = { id, cols, byInternal }
   }))
+  if (missingLists.length || problems.length) {
+    const lines = [...missingLists.map((t) => `Hiányzó lista: „${t}”`), ...problems]
+    throw new GraphError(409, 'setup_incomplete', `A SharePoint-beállítás még hiányos a „Beszerzés” webhelyen:\n• ${lines.join('\n• ')}\nHozd létre őket (lásd README), majd töltsd újra az oldalt.`)
+  }
   await ensureFolder('', ROOT_FOLDER)
   await ensureFolder('', TEST_FOLDER)
-  return ids
+  keyOfId.clear()
+  for (const [k, v] of Object.entries(out)) keyOfId.set(v.id, k)
+  infoNow = out
+  return out
 }
 
+/** List ids by key; provisions/maps once per instance and re-reads columns every 10 minutes (to pick up columns added by hand). */
 export async function lists(): Promise<Record<string, string>> {
-  if (listIds) return listIds
-  if (!provisioning) provisioning = provision().then((r) => (listIds = r)).catch((e) => { provisioning = null; throw e })
-  return provisioning
+  if (!cache || Date.now() - cache.at > REFRESH_MS) {
+    const p = provision()
+    cache = { at: Date.now(), p }
+    p.catch(() => { if (cache?.p === p) cache = null })
+  }
+  const info = await cache.p
+  return Object.fromEntries(Object.entries(info).map(([k, v]) => [k, v.id]))
+}
+
+function coerce(kind: Kind, v: unknown, logical: string) {
+  if (v === null || v === undefined || v === '') return null
+  if (kind === 'number') { const n = Number(v); return Number.isFinite(n) ? n : null }
+  if (kind === 'bool') return !!v
+  if (kind === 'date') return /^\d{4}-\d{2}-\d{2}/.test(String(v)) ? `${String(v).slice(0, 10)}T12:00:00Z` : null
+  if (kind === 'datetime') { const d = new Date(String(v)); return isNaN(+d) ? null : d.toISOString() }
+  if (kind === 'note') return logical === 'AppData' ? String(v) : String(v).slice(0, 60000)
+  return String(v).slice(0, 255)
+}
+
+/** Converts logical values ({ Title, AppId, AppData, Targy, ... }) to SharePoint fields of the list, skipping columns that don't exist. */
+export function toFields(key: ListKey, data: Record<string, unknown> = {}) {
+  const info = infoNow[key]
+  const out: Record<string, unknown> = {}
+  if (typeof data.Title === 'string') out.Title = data.Title.slice(0, 255)
+  if (!info) return out
+  for (const [logical, v] of Object.entries(data)) {
+    const a = info.cols[logical]
+    if (logical === 'Title' || !a || a.kind === 'other') continue
+    out[a.name] = coerce(a.kind, v, logical)
+  }
+  return out
+}
+/** Just the essentials, used to retry a write that a hand-made column rejected. */
+export const minimalFields = (key: ListKey, data: Record<string, unknown>) => toFields(key, { Title: data.Title, AppId: data.AppId, AppData: data.AppData })
+
+/** Parses the AppData JSON of a row (tolerates rich-text columns that wrap it in HTML). */
+export function appData<T = any>(r: any): T | null {
+  let s = r?.fields?.AppData
+  if (typeof s !== 'string' || !s) return null
+  if (s.trimStart().startsWith('<')) s = s.replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
+  try { return JSON.parse(s) } catch { return null }
 }
 
 export const itemsPath = (listId: string) => `${site()}/lists/${listId}/items`
 
 export async function loadRows(listId: string): Promise<any[]> {
-  return pages(`${itemsPath(listId)}?expand=fields&$top=999`)
-}
-
-/** Converts a client "view" object into SharePoint fields, keeping only known visible columns. */
-export function viewToFields(key: ListKey, view: Record<string, unknown> = {}) {
-  const def = LISTS[key]
-  const out: Record<string, unknown> = {}
-  if (typeof view.Title === 'string') out.Title = view.Title.slice(0, 255)
-  for (const col of def.cols) {
-    if (col.hidden || !(col.name in view)) continue
-    const v = view[col.name]
-    if (v === null || v === undefined || v === '') { out[col.name] = null; continue }
-    if (col.kind === 'number') { const n = Number(v); out[col.name] = Number.isFinite(n) ? n : null }
-    else if (col.kind === 'bool') out[col.name] = !!v
-    else if (col.kind === 'date') out[col.name] = /^\d{4}-\d{2}-\d{2}/.test(String(v)) ? `${String(v).slice(0, 10)}T12:00:00Z` : null
-    else if (col.kind === 'datetime') { const d = new Date(String(v)); out[col.name] = isNaN(+d) ? null : d.toISOString() }
-    else if (col.kind === 'note') out[col.name] = String(v).slice(0, 60000)
-    else out[col.name] = String(v).slice(0, 255)
+  const rows = await pages(`${itemsPath(listId)}?expand=fields&$top=999`)
+  const info = infoNow[keyOfId.get(listId) || '']
+  if (info) for (const r of rows) {
+    const f = r.fields || {}
+    for (const [internal, logical] of Object.entries(info.byInternal)) if (internal !== logical && internal in f) f[logical] = f[internal]
   }
-  return out
+  return rows
 }
 
 /** Safe folder/file name for SharePoint. */

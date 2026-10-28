@@ -1,7 +1,7 @@
 import { appendAudit, type AuditIn } from './_lib/audit.js'
 import { batch, drive, encPath, graph } from './_lib/graph.js'
 import { access } from './_lib/people.js'
-import { checkPath, createProcFolders, itemsPath, lists, safeName, viewToFields, type ListKey } from './_lib/schema.js'
+import { checkPath, createProcFolders, itemsPath, lists, minimalFields, safeName, toFields, type ListKey } from './_lib/schema.js'
 import { json, sessionFromRequest, unauthorized } from './_lib/session.js'
 
 type Op = { t: ListKey; key: string; sp?: string; data?: any; view?: Record<string, unknown>; del?: boolean }
@@ -53,14 +53,20 @@ export async function POST(request: Request) {
       }
     }
 
-    const reqs = allowed.map((o, i) => {
+    const logical = (o: Op) => ({ ...(o.view || {}), AppId: o.key, AppData: JSON.stringify({ ...o.data, _sp: undefined }) })
+    const req = (o: Op, i: number, fields: Record<string, unknown>) => {
       const listId = ids[o.t]
-      const fields = { ...viewToFields(o.t, o.view || {}), AppId: o.key, AppData: JSON.stringify({ ...o.data, _sp: undefined }) }
       if (o.del) return { id: String(i), method: 'DELETE', url: `${itemsPath(listId)}/${o.sp}` }
       if (o.sp) return { id: String(i), method: 'PATCH', url: `${itemsPath(listId)}/${o.sp}/fields`, body: fields }
       return { id: String(i), method: 'POST', url: itemsPath(listId), body: { fields } }
-    })
-    const res = await batch(reqs)
+    }
+    const res = await batch(allowed.map((o, i) => req(o, i, toFields(o.t, logical(o)))))
+    // A hand-made column with an unexpected setting can reject a value: retry those rows with the essentials only.
+    const retry = allowed.map((o, i) => [o, i] as const).filter(([o, i]) => !o.del && res.get(String(i))?.status === 400)
+    if (retry.length) {
+      const again = await batch(retry.map(([o, i]) => req(o, i, minimalFields(o.t, logical(o)))))
+      for (const [k, v] of again) { if (v.status < 300) console.warn('row saved without readable columns', k, res.get(k)?.body?.error?.message); res.set(k, v) }
+    }
     allowed.forEach((o, i) => {
       const r = res.get(String(i)), k = `${o.t}:${o.key}`
       if (!r || r.status >= 300) { if (!(o.del && r?.status === 404)) errors.push({ k, message: r?.body?.error?.message || `HTTP ${r?.status}` }); return }

@@ -1,10 +1,10 @@
 // Permanently deletes a TEST procurement (TESZT-…) with all its records, test audit entries and its folder.
 import { batch } from '../_lib/graph.js'
 import { requireUser } from '../_lib/people.js'
-import { checkPath, deleteFolder, itemsPath, lists, loadRows, TEST_FOLDER } from '../_lib/schema.js'
+import { appData, checkPath, deleteFolder, itemsPath, lists, loadRows, TEST_FOLDER } from '../_lib/schema.js'
 import { json } from '../_lib/session.js'
 
-const pidOf = (r: any) => { const f = r.fields || {}; if (f.Beszerzes) return f.Beszerzes; try { return JSON.parse(f.AppData || '{}').pid } catch { return undefined } }
+const pidOf = (r: any) => { if (r.fields?.Beszerzes) return r.fields.Beszerzes; const d = appData(r); return d?.pid ?? d?.proc }
 
 export async function POST(request: Request) {
   const u = await requireUser(request)
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   const ids = await lists()
   const procRow = (await loadRows(ids.proc)).find((r: any) => r.fields?.AppId === pid)
   if (!procRow) return json({ error: 'not_found' }, 404)
-  const data = JSON.parse(procRow.fields.AppData || '{}')
+  const data: any = appData(procRow) || {}
   if (!acc.admin && data.createdBy !== me.email) return json({ error: 'forbidden', message: 'Csak a létrehozó vagy adminisztrátor törölheti.' }, 403)
 
   const reqs: { id: string; method: string; url: string }[] = [{ id: 'proc', method: 'DELETE', url: `${itemsPath(ids.proc)}/${procRow.id}` }]

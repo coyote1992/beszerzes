@@ -1,13 +1,12 @@
 import { gj } from './graph.js'
-import { itemsPath, lists, loadRows } from './schema.js'
+import { appData, itemsPath, lists, loadRows, toFields } from './schema.js'
 import { json, sessionFromRequest, unauthorized, type SessionUser } from './session.js'
 
 export type Person = { email: string; name: string; title: string; admin: boolean; active: boolean; _sp?: string }
 
 export function rowToPerson(r: any): Person | null {
   const f = r.fields || {}
-  let d: any = {}
-  try { d = f.AppData ? JSON.parse(f.AppData) : {} } catch { d = {} }
+  const d: any = appData(r) || {}
   const email = String(d.email || f.Email || '').toLowerCase()
   if (!email) return null
   return { email, name: d.name || f.Title || email, title: d.title ?? f.Beosztas ?? '', admin: !!(d.admin ?? f.Admin), active: (d.active ?? f.Aktiv) !== false, _sp: r.id }
@@ -26,7 +25,7 @@ export async function upsertOnLogin(me: SessionUser): Promise<Person> {
   if (found) return found
   const admin = !people.some((p) => p.admin)
   const p: Person = { email: me.email.toLowerCase(), name: me.name, title: '', admin, active: true }
-  const created = await gj(itemsPath(ids.person), { method: 'POST', body: JSON.stringify({ fields: { Title: p.name, AppId: p.email, Email: p.email, Admin: p.admin, Aktiv: true, AppData: JSON.stringify(p) } }) })
+  const created = await gj(itemsPath(ids.person), { method: 'POST', body: JSON.stringify({ fields: toFields('person', { Title: p.name, AppId: p.email, Email: p.email, Admin: p.admin, Aktiv: true, AppData: JSON.stringify(p) }) }) })
   return { ...p, _sp: created.id }
 }
 

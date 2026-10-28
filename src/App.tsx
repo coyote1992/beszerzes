@@ -82,7 +82,7 @@ export default function App() {
   if (phase === 'error') return (
     <Splash>
       <h1 className="text-base font-semibold">Nem sikerült betölteni az adatokat</h1>
-      <p className="text-sm text-muted-foreground">{err}</p>
+      <p className="whitespace-pre-line text-left text-sm text-muted-foreground">{err}</p>
       <div className="flex gap-2"><Button variant="outline" onClick={() => (location.href = '/api/auth/logout')}>Kijelentkezés</Button><Button onClick={() => void boot()}>Újrapróbálás</Button></div>
     </Splash>
   )

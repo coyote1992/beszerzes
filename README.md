@@ -54,12 +54,31 @@ Vercel környezeti változók (Production): `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_
 
 Entra ID alkalmazásregisztráció:
 1. **Authentication → Add a platform → Web**, Redirect URI: `https://beszerzes.vercel.app/api/auth/callback`
-2. **API permissions**: Microsoft Graph *Application* `Sites.Selected` + *Delegated* `openid`, `profile`, `email` (admin consent).
-   A „Beszerzés” webhelyre az alkalmazásnak **manage** szerepkör kell (a *write* csak elemeket és fájlokat írhat, listát létrehozni nem).
-   Graph Explorerben (SharePoint-/globális adminként, `Sites.FullControl.All` hozzájárulással):
-   - `GET https://graph.microsoft.com/v1.0/sites/<SP_SITE_ID>/permissions` → az alkalmazáshoz tartozó bejegyzés `id`-ja
-   - `PATCH https://graph.microsoft.com/v1.0/sites/<SP_SITE_ID>/permissions/<id>` törzs: `{ "roles": ["manage"] }`
-   - (PnP PowerShell-lel ugyanez: `Set-PnPAzureADAppSitePermission -PermissionId <id> -Permissions Manage`)
+2. **API permissions**: Microsoft Graph *Application* `Sites.Selected` (a „Beszerzés” webhelyre **write** joggal) + *Delegated* `openid`, `profile`, `email` (admin consent).
 3. Ha csak kijelölt munkatársak léphetnek be: Enterprise applications → az alkalmazás → Properties → *Assignment required = Yes*, majd Users and groups alatt hozzárendelés.
 
 Ha a kliens titok lejár, új titkot kell létrehozni és a `MS_CLIENT_SECRET` értékét frissíteni (a meglévő bejelentkezések ilyenkor érvénytelenné válnak, ha nincs külön `SESSION_SECRET`).
+
+## SharePoint-listák kézi létrehozása
+
+*write* joggal az alkalmazás nem tud listát létrehozni, ezért a listákat kézzel kell elkészíteni a „Beszerzés” webhelyen
+(vagy ideiglenesen *manage* jogot adni, és akkor az alkalmazás maga hozza létre őket).
+Minden lista „Cím” oszlopa marad. Az oszlopnevekben az ékezet, a kis-/nagybetű és a kötőjel nem számít.
+A ★ oszlopok kötelezők, a többi csak a SharePointban való olvashatóságot szolgálja – bármikor hozzáadható (a sorok a következő mentéskor töltődnek ki).
+
+Típusok: **Egysoros** = Egysoros szöveg · **Többsoros** = Többsoros szöveg (bővített formázás KI) · **Szám** · **Dátum** = Dátum és idő · **Igen/Nem**
+
+| Lista | Oszlopok |
+| --- | --- |
+| Beszerzések | ★ AppId (Egysoros), ★ AppData (Többsoros); Egysoros: Tárgy, Igénylő szervezet, Költséghely, Kategória, Eljárás, Beszerzési típus, Szakasz, Státusz, Igénylő, Felelős beszerző, Következő lépés, Szerződéstípus, Nyertes beszállító; Szám: Becsült nettó érték, Végső ár, Megtakarítás; Dátum: Következő határidő, Kívánt teljesítés, Ajánlattételi határidő, Lezárva, Létrehozás dátuma; Igen/Nem: IFS-kritikus, Teszt; Többsoros: Dokumentummappa |
+| Ajánlattevők | ★ AppId, ★ AppData; Egysoros: Beszerzés, E-mail, Ajánlattevő típusa, Állapot, Formailag megfelelő; Szám: Nettó ár, Fizetési határidő (nap), Szállítási idő (hét), Jótállás (hó), Műszaki pontszám; Dátum: Beérkezett; Igen/Nem: Új beszállító |
+| Jóváhagyások | ★ AppId, ★ AppData; Egysoros: Beszerzés, Jóváhagyás típusa, Kérte, Állapot; Dátum: Kérve; Többsoros: Döntések |
+| Feladatok | ★ AppId, ★ AppData; Egysoros: Felelős, Kiosztotta, Beszerzés; Dátum: Határidő, Elvégezve; Többsoros: Leírás |
+| Dokumentum-nyilvántartás | ★ AppId, ★ AppData; Egysoros: Beszerzés, Dokumentumtípus, Ajánlattevő, Feltöltötte, Megjegyzés; Szám: Dokumentumverzió; Dátum: Időpont; Többsoros: Fájl hivatkozás |
+| Munkatársak | ★ AppId, ★ AppData; Egysoros: E-mail, Beosztás, Szerepkörök; Igen/Nem: Adminisztrátor, Aktív |
+| Beállítások | ★ AppId, ★ AppData |
+| Auditnapló | ★ AppData; Egysoros: Felhasználó, E-mail, Beszerzés, Esemény típusa, Előző hash, Hash; Szám: Sorszám; Dátum: Időpont; Többsoros: Részletek |
+| Auditnapló – teszt | ugyanaz, mint az Auditnapló |
+
+(A zárójeles mértékegység nem része az oszlopnévnek: „Fizetési határidő”, „Szállítási idő”, „Jótállás”.)
+Ha valami hiányzik vagy rossz típusú, az alkalmazás hibaképernyője pontosan megnevezi a listát és az oszlopot.
