@@ -228,7 +228,7 @@ export function saveNego(pid, v, cand) {
   log(p.id, 'Értékelés', 'Tárgyalási kör lezárva', `Nyertes: ${b.name} · ${ft(ini)} → ${ft(fin)} · megtakarítás: ${ft(p.nego.saving)}`)
   toast('Tárgyalás rögzítve', 'ok')
 }
-export const PREQ = ['Cégkivonat (30 napnál nem régebbi)', 'Adószám és közösségi adószám (NAV / VIES)', 'Köztartozás-mentesség', 'Tényleges tulajdonos (BO) nyilatkozat', 'Felelősségbiztosítás igazolása', 'Beszállítói adatlap + adatkezelési tájékoztató', 'IFS / BRC / FSSC 22000 / ISO 9001 tanúsítvány', 'Specifikáció, EU 1935/2004 és 10/2011 megfelelőségi nyilatkozat', 'Kioldódási vizsgálat, allergén-nyilatkozat', 'COA/DoC garancia, nyomonkövethetőség, mock recall', 'MI értékelés (max. 5 munkanap)', 'Pénzügyi stabilitás ellenőrzése', 'MDM felvétel indítva (BC)']
+export const PREQ = ['Cégkivonat (30 napnál nem régebbi)', 'Adószám és közösségi adószám (NAV / VIES)', 'Köztartozás-mentesség', 'Tényleges tulajdonos (BO) nyilatkozat', 'Felelősségbiztosítás igazolása', 'Beszállítói adatlap + adatkezelési tájékoztató', 'IFS / BRC / FSSC 22000 / ISO 9001 tanúsítvány', 'Specifikáció, EU 1935/2004 és 10/2011 megfelelőségi nyilatkozat', 'Kioldódási vizsgálat, allergén-nyilatkozat', 'COA/DoC garancia, nyomonkövethetőség, mock recall', 'MI értékelés (max. 5 munkanap)', 'Pénzügyi stabilitás ellenőrzése', 'Beszállító felvétele a BC-be elindítva']
 export function savePrequal(pid, checked) {
   const p = P(pid)
   p.f.prequalItems = checked

@@ -22,11 +22,11 @@ export const h53=(str,seed=0)=>{let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed;for(le
 
 /* ===== Roles, people, cost centres (configured in Beállítások) ===== */
 /* Built-in roles are referenced by the rules below; custom roles (S.roleDefs) can be assigned to people and used as cost-centre approvers. */
-export const BUILTIN_ROLES=[['CEO','Ügyvezető (CEO)'],['CFO','Pénzügyi igazgató (CFO)'],['SCM','SCM vezető / beszerzés'],['MI','Minőségirányítás / IFS'],['MDM','Törzsadat-kezelés (MDM)']];
+export const BUILTIN_ROLES=[['CEO','Ügyvezető (CEO)'],['CFO','Pénzügyi igazgató (CFO)'],['SCM','SCM vezető / beszerzés'],['MI','Minőségirányítás / IFS']];
 export const isBuiltinRole=k=>BUILTIN_ROLES.some(r=>r[0]===k);
 export let ROLES=BUILTIN_ROLES.map(r=>[r[0],r[1]]);
 export let ROLE_LABEL=Object.fromEntries(ROLES);
-export let CEO='role:CEO',CFO='role:CFO',SCM='role:SCM',MI='role:MI',MDM='role:MDM';
+export let CEO='role:CEO',CFO='role:CFO',SCM='role:SCM',MI='role:MI';
 export const roleRef=r=>(S&&S.roles&&S.roles[r])||'role:'+r;
 export const INF=Infinity;
 /* Cost centres and approval bands (11. melléklet). Band = [upper limit (null = no limit), approver ref, hint from the policy].
@@ -41,7 +41,7 @@ export const DEFAULT_CC={
  '1255BS3400':{n:'Csány telephely – termelés',b:[[2e5,'','Szilágyi László'],[2e6,'role:SCM','Sándor Dávid'],[null,'role:CEO','Haász Róbert']]}};
 export let CC=DEFAULT_CC;
 export function applyRoles(){const cu=(S&&S.roleDefs)||[];ROLES=[...BUILTIN_ROLES.map(r=>[r[0],r[1]]),...cu.map(r=>[r.key,r.label])];ROLE_LABEL=Object.fromEntries(ROLES);
-  CEO=roleRef('CEO');CFO=roleRef('CFO');SCM=roleRef('SCM');MI=roleRef('MI');MDM=roleRef('MDM');CC=(S&&S.cc)||DEFAULT_CC;}
+  CEO=roleRef('CEO');CFO=roleRef('CFO');SCM=roleRef('SCM');MI=roleRef('MI');CC=(S&&S.cc)||DEFAULT_CC;}
 export const resolveRef=(ref,code,i)=>ref===null?null:(ref&&ref.startsWith('role:')?roleRef(ref.slice(5)):(ref||`cc:${code}:${i}`));
 export const personOf=e=>S&&S.people?S.people.find(p=>p.email===e):null;
 /** Display name for a person key (e-mail), an unassigned role or an unassigned cost-centre band. */
@@ -193,7 +193,7 @@ export function checklist(p){
   if(s===4){
     push({id:'nego',label:'Tárgyalási kör lezárása és nyertes beszállító kiválasztása',short:'Tárgyalás lezárása',who:p.owner,done:!!p.nego,ev:p.nego?`Nyertes: ${p.nego.winnerName} · végső ár: ${ft(p.nego.final)} · megtakarítás: ${ft(p.nego.saving)}`:'',acts:p.nego?[]:[{a:'nego',l:'Tárgyalás rögzítése',p:true}]});
     if(p.nego&&p.nego.final<p.nego.initial)dI('revised',dl('revised'),p.owner);
-    if(p.nego&&p.nego.isNew)fI('prequal','Új beszállító előminősítése (MI ≤ 5 munkanap, Pénzügy, MDM)',MI,{acts:[{a:'prequal',l:'Előminősítés',p:!p.f.prequal}]});
+    if(p.nego&&p.nego.isNew)fI('prequal','Új beszállító előminősítése (MI, 5 munkanapon belül)',MI,{acts:[{a:'prequal',l:'Előminősítés',p:!p.f.prequal}]});
     if(p.ifs)dI('ifsCert',dl('ifsCert'),MI);
     if((SS||p.reclass)&&tcoReq(p))dI('tco',dl('tco'),p.owner,{acts:[{a:'tco',l:'TCO számoló',p:true},{a:'doc',k:'tco',l:'Feltöltés'}]});
     if(p.reclass){dI('ssForm',dl('ssForm'),p.owner);aI('ss','Sole Source indoklás jóváhagyása');}

@@ -9,7 +9,6 @@ export declare const DEFAULT_CC: any
 export declare const DOCS: any
 export declare const FOLDERS: any
 export declare const INF: any
-export declare const MDM: any
 export declare const MI: any
 export declare const MON: any
 export declare const MONL: any
