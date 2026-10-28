@@ -82,7 +82,7 @@ export function createProc(v) {
 export function advance(pid) {
   const p = P(pid), miss = checklist(p).filter((i) => !i.done)
   if (miss.length) return 'Még hiányzik: ' + (miss[0].short || miss[0].label)
-  if (p.stage === 6) return 'close'
+  if (p.stage === STAGES.length) return 'close'
   const old = p.stage
   p.stage = nextStage(p); p.due[p.stage] = addWD(S.today, 5)
   log(p.id, 'Státusz', 'Státuszváltás', `PROC${old} → PROC${p.stage} · ${STAGES[p.stage - 1][1]}`)

@@ -45,13 +45,13 @@ const SelectTrigger = ({
         size: size === "sm" ? "input-sm" : "input",
         variant: "input",
       }),
-      "w-full justify-between whitespace-normal pr-3",
+      "w-full min-w-0 justify-between whitespace-nowrap pr-3",
       className,
     )}
     data-slot="select-trigger"
     {...props}
   >
-    <span className="line-clamp-2 flex-1 pr-0.5 text-left">{children}</span>
+    <span className="min-w-0 flex-1 truncate pr-0.5 text-left">{children}</span>
     <SelectPrimitive.Icon render={<ChevronDownIcon className="size-4 opacity-50" />} />
   </SelectPrimitive.Trigger>
 );
@@ -113,7 +113,7 @@ const SelectContent = ({
       >
         <SelectPrimitive.Popup
           className={cn(
-            "data-open:fade-in-80 relative z-110 min-w-[8rem] origin-(--transform-origin) overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-soft data-closed:animate-out data-open:animate-in",
+            "data-open:fade-in-80 relative z-110 min-w-[8rem] max-w-[min(26rem,calc(100vw-2rem))] origin-(--transform-origin) overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-soft data-closed:animate-out data-open:animate-in",
             position === "popper" && "translate-y-1",
             className,
           )}

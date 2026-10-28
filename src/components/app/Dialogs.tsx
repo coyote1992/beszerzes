@@ -220,7 +220,7 @@ function Ctype({ pid }: { pid: string }) {
 }
 function Input_({ pid, k }: { pid: string; k: string }) {
   const L: Record<string, [string, string, string]> = { po: ['PO kibocsátása', 'PO-szám (BC)', 'pl. 4500019123'], bc: ['Szerződés rögzítése BC-ben', 'BC szerződésszám', 'pl. FCO-2026-014'] }
-  return <FormDialog kicker="PROC6" title={L[k][0]} initial={{ n: '' }} fields={[{ name: 'n', label: L[k][1], ph: L[k][2] }]} onSubmit={(v) => (String(v.n || '').trim() ? run(() => C.setInput(pid, k, String(v.n).trim())) as any : 'Adja meg a számot.')} />
+  return <FormDialog kicker="PROC5" title={L[k][0]} initial={{ n: '' }} fields={[{ name: 'n', label: L[k][1], ph: L[k][2] }]} onSubmit={(v) => (String(v.n || '').trim() ? run(() => C.setInput(pid, k, String(v.n).trim())) as any : 'Adja meg a számot.')} />
 }
 function Resolve({ pid }: { pid: string }) {
   return <FormDialog kicker="PROC3 · 9.3.6" title={`Érvényes ajánlatok száma: ${validBids(P(pid)).length}`} ok="Döntés rögzítése" initial={{ r: 'ss', n: '' }}
@@ -231,7 +231,7 @@ function Fail({ pid }: { pid: string }) {
   return <FormDialog kicker="SCM vezető döntése" title="Eljárás sikertelenné nyilvánítása" ok="Sikertelen" danger initial={{ r: '' }} fields={[{ name: 'r', kind: 'textarea', label: 'Indoklás (kötelező)', ph: 'Az ajánlatok jelentősen meghaladják a költségkeretet / egyik sem felel meg műszakilag…', hint: 'Új tender indítható módosított specifikációval vagy szélesebb ajánlattevői körrel.' }]} onSubmit={(v) => run(() => C.failProc(pid, v.r)) as any} />
 }
 function Close({ pid }: { pid: string }) {
-  return <FormDialog kicker="PROC6" title="Beszerzés lezárása" ok="Lezárás" before={<Note tone="ok"><LockIcon className="mr-1.5 inline size-4" />Lezáráskor a tendercsomag zárolt állapotba kerül, és rákerül a szabályzat szerinti megőrzési idő (szerződés lejárta + 8 év; PO/számla 8 év; tenderdokumentáció 5 év). Tartós, adminisztrátor által sem módosítható megőrzéshez Microsoft Purview megőrzési címke javasolt.</Note>} onSubmit={() => run(() => C.closeProc(pid)) as any} />
+  return <FormDialog kicker="PROC5" title="Beszerzés lezárása" ok="Lezárás" before={<Note tone="ok"><LockIcon className="mr-1.5 inline size-4" />Lezáráskor a tendercsomag zárolt állapotba kerül, és rákerül a szabályzat szerinti megőrzési idő (szerződés lejárta + 8 év; PO/számla 8 év; tenderdokumentáció 5 év). Tartós, adminisztrátor által sem módosítható megőrzéshez Microsoft Purview megőrzési címke javasolt.</Note>} onSubmit={() => run(() => C.closeProc(pid)) as any} />
 }
 function ViewDoc({ pid, id }: { pid: string; id: string }) {
   const d = P(pid).docs.find((x: any) => x.id === id)
@@ -275,8 +275,8 @@ function RoleDelete({ k }: { k: string }) {
 }
 function AddPerson() {
   return <FormDialog kicker="Beállítások" title="Munkatárs hozzáadása" ok="Hozzáadás" initial={{ name: '', email: '', title: '' }}
-    before={<Note>Aki egyszer bejelentkezik, automatikusan felkerül a listára. Itt előre is felveheti a kollégákat, hogy szerepkört vagy feladatot kaphassanak.</Note>}
-    fields={[{ name: 'name', full: true, label: 'Név' }, { name: 'email', full: true, label: 'E-mail (Fonte Viva-s fiók)', ph: 'nev@fonteviva.hu' }, { name: 'title', full: true, label: 'Beosztás (opcionális)' }]}
+    before={<Note>Fonte Viva-s kolléga az első bejelentkezéskor magától felkerül; előre felvéve már szerepkört és feladatot kaphat. <b>Külső fiók</b> (pl. @mol.hu) csak akkor léphet be, ha itt fel van véve, és az Entra-ban vendégként meg van hívva a Fonte Viva bérlőbe.</Note>}
+    fields={[{ name: 'name', full: true, label: 'Név' }, { name: 'email', full: true, label: 'E-mail', ph: 'nev@fonteviva.hu vagy nev@mol.hu' }, { name: 'title', full: true, label: 'Beosztás (opcionális)' }]}
     onSubmit={(v) => {
       const email = String(v.email || '').trim().toLowerCase()
       if (!v.name.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return 'Adjon meg nevet és érvényes e-mail címet.'

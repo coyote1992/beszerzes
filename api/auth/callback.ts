@@ -1,4 +1,4 @@
-import { upsertOnLogin } from '../_lib/people.js'
+import { loadPeople, upsertOnLogin } from '../_lib/people.js'
 import { OAUTH_COOKIE, appOrigin, cookie, cookies, htmlPage, newSessionCookie, unsign } from '../_lib/session.js'
 
 const fail = (msg: string) => htmlPage('Bejelentkezés sikertelen', `<h1>Bejelentkezés sikertelen</h1><p>${msg}</p><a class="b" href="/api/auth/login">Újrapróbálás</a>`, 400, { 'Set-Cookie': cookie(OAUTH_COOKIE, '', 0) })
@@ -25,9 +25,14 @@ export async function GET(request: Request) {
   let c: any
   try { c = JSON.parse(Buffer.from(String(tok.id_token).split('.')[1], 'base64url').toString('utf8')) } catch { return fail('Érvénytelen azonosító token.') }
   if (c.aud !== MS_CLIENT_ID || c.tid !== MS_TENANT_ID || c.nonce !== st.n || (c.exp && c.exp * 1000 < Date.now())) return fail('A token ellenőrzése nem sikerült.')
-  if (c.idp && !String(c.idp).includes(String(MS_TENANT_ID))) return fail('Vendégfiókkal nem lehet belépni. Kérjük, a Fonte Viva-s fiókját válassza.')
   const email = String(c.email || c.preferred_username || '').toLowerCase()
   if (!email) return fail('A fiókhoz nem tartozik e-mail cím.')
+  // Guests (B2B, e.g. a mol.hu account invited into the Fonte Viva tenant) only if an admin added them to Munkatársak beforehand.
+  if (c.idp && !String(c.idp).includes(String(MS_TENANT_ID))) {
+    let listed = false
+    try { listed = (await loadPeople()).some((p) => p.email === email && p.active) } catch (e) { console.error('people check failed', e) }
+    if (!listed) return fail(esc(`Külső fiókkal (${email}) csak az léphet be, akit az alkalmazás adminisztrátora előre felvett a Munkatársak közé.`))
+  }
   const me = { email, name: String(c.name || email), oid: String(c.oid || '') }
 
   try { const p = await upsertOnLogin(me); if (!p.active) return fail('A fiókod hozzáférése le van tiltva. Fordulj az alkalmazás adminisztrátorához.') }

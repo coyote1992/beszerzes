@@ -229,7 +229,7 @@ export function Policy() {
       </Panel>
       <Panel i={4}><PanelHead title="Folyamatlépések és megőrzési idők" />
         <div className="grid gap-2 px-4 pb-4 md:grid-cols-2 xl:grid-cols-3">
-          {STAGES.map((s: string[], i: number) => <div key={s[0]} className="rounded-lg border p-2.5 text-sm"><span className="mr-2 font-mono text-xs text-muted-foreground">{s[0]}</span><span className="font-medium">{s[1]}</span><div className="mt-0.5 text-muted-foreground">{['Igénylő', 'Beszerzés + Igénylő + MI', 'Beszerzés + Igénylő', 'Beszerzés (vezeti) + Igénylő', 'Beszerzés + Jogi/Pénzügy + CEO/CFO', 'Beszerzés + MDM + Raktár + MI'][i]}</div></div>)}
+          {STAGES.map((s: string[], i: number) => <div key={s[0]} className="rounded-lg border p-2.5 text-sm"><span className="mr-2 font-mono text-xs text-muted-foreground">{s[0]}</span><span className="font-medium">{s[1]}</span><div className="mt-0.5 text-muted-foreground">{['Igénylő', 'Beszerzés + Igénylő + MI', 'Beszerzés + Igénylő', 'Beszerzés (vezeti) + Igénylő', 'Beszerzés + Jogi/Pénzügy + CEO/CFO'][i]}</div></div>)}
         </div>
         <div className="border-t px-4 py-3 text-sm text-muted-foreground">Megőrzés: szerződések és kapcsolódó dokumentáció a lejártot követő <b className="text-foreground">8 év</b> · PO és számla <b className="text-foreground">8 év</b> · tenderdokumentáció (nem nyertes ajánlatok is) <b className="text-foreground">5 év</b>.</div>
       </Panel>

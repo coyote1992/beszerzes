@@ -22,7 +22,7 @@ function Pipeline() {
   return (
     <Panel i={5} className="mb-4">
       <PanelHead title="Folyamat-térkép" sub="Aktív beszerzések PROC-szakaszonként" />
-      <div className="scrollbar-thin grid grid-cols-[repeat(6,minmax(9.5rem,1fr))] gap-2 overflow-x-auto px-3 pb-3">
+      <div className="scrollbar-thin grid grid-cols-[repeat(5,minmax(9.5rem,1fr))] gap-2 overflow-x-auto px-3 pb-3">
         {STAGES.map((st: string[], idx: number) => {
           const list = act.filter((p: any) => p.stage === idx + 1)
           return (

@@ -25,7 +25,6 @@ const C: Record<string, Cond> = {
   NEW: { l: 'új beszállító', t: (v) => v.newSup },
   TCO: { l: 'CAPEX, nem fenntartó', t: (v) => v.cat === 'CAPEX' && !v.maint },
   PRE: { l: 'előleg', t: (v) => v.prepay },
-  BC: { l: 'ICO / FCO / előrevásárlás', t: (v) => ['ICO', 'FCO', 'Előrevásárlás'].includes(v.ctype) },
   LOW: { l: '< 2 M Ft', t: (v) => v.value < 2e6 },
   HIGH: { l: '≥ 2 M Ft', t: (v) => v.value >= 2e6 },
   // outcomes: not known up front, always shown with their condition
@@ -73,18 +72,8 @@ const proc5: Stage = { n: 5, items: [
   { k: 'decision', t: 'Előleg biztosítéka?', who: ['OWN', 'CFO'], when: C.PRE, br: [['Bankgarancia csatolva', 'felelős beszerző'], ['Eltérés a bankgaranciától', 'csak CFO írásos engedélyével']] },
   { k: 'gate', t: 'Cégszerű aláírás', who: [{ who: ['CEO', 'CFO'] }], note: 'kiemeltnél csak a jogi és pénzügyi vélemény után', ev: APPROVED },
   { k: 'doc', t: 'Aláírt példány (Netlock vagy papír + szkennelt)', who: ['OWN'] },
-] }
-const proc6: Stage = { n: 6, items: [
-  { k: 'flag', t: 'Törzsadatok a BC-ben: beszállító, cikkszám, fizetési feltételek', who: ['MDM'] },
-  { k: 'step', t: 'Szerződés rögzítése a BC-ben', who: ['OWN'], when: C.BC, ev: 'Szerződés rögzítve BC-ben' },
-  { k: 'step', t: 'PO kibocsátása – csak a törzsadatok után', who: ['OWN'], ev: 'PO kibocsátva' },
-  { k: 'flag', t: 'Mennyiségi átvétel', who: ['REQ'] },
-  { k: 'flag', t: 'Minőségi átvétel: COA / DoC, karantén, felszabadítás', who: ['MI'], when: C.IFS },
-  { k: 'doc', t: 'Teljesítésigazolás (9. melléklet)', who: ['REQ'] },
-  { k: 'flag', t: 'Számla egyezése a PO-val / szerződéssel – csak igazolt teljesítés után', who: ['OWN'] },
   { k: 'step', t: 'Lezárás – a dokumentumtár zárolva, megőrzés indul', who: ['OWN'], ev: 'Beszerzés lezárva' },
 ] }
-
 const PATHS: Path[] = [
   { id: 'Tender', title: 'Tender', sub: 'Alapeset: min. 3 írásos ajánlat (egyedinél max. 2 webáruházi)', skip: [], stages: [
     proc1,
@@ -106,7 +95,7 @@ const PATHS: Path[] = [
       { k: 'doc', t: 'Kiértékelési mátrix (műszaki 40% · kereskedelmi 60%) – generálható', who: ['OWN'] },
       { k: 'flag', t: 'Titoktartási és összeférhetetlenségi nyilatkozatok (ÉB-tagok)', who: ['OWN'], when: C.K },
     ] },
-    proc4(false), proc5, proc6,
+    proc4(false), proc5,
   ] },
   { id: 'SS', title: 'Sole Source', sub: 'Verseny nélkül, írásos indoklással: monopólium, gyártói karbantartás, időkritikus üzemzavar, stratégiai partner, hosszabbítás', skip: [3], stages: [
     proc1,
@@ -119,21 +108,19 @@ const PATHS: Path[] = [
       { k: 'doc', t: 'IFS / minőségi követelmények', who: ['MI'], when: C.IFS },
       { k: 'gate', t: 'Sole Source indoklás jóváhagyása', who: [{ when: C.NK, who: ['CCS'] }, { when: C.K, who: ['CEO', 'CFO'] }], note: 'IFS-kritikus alapanyagnál 1 évnél hosszabb SS csak alternatíva-keresési tervvel', ev: APPROVED },
     ] },
-    proc4(true), proc5, proc6,
+    proc4(true), proc5,
   ] },
-  { id: 'VH', title: 'Vészhelyzeti', sub: 'Üzemzavar, élelmiszerbiztonsági kockázat, hatósági előírás, vis maior – azonnali megrendelés, utólagos dokumentálás', skip: [2, 3, 4, 5], stages: [
+  { id: 'VH', title: 'Vészhelyzeti', sub: 'Üzemzavar, élelmiszerbiztonsági kockázat, hatósági előírás, vis maior – azonnali megrendelés, utólagos dokumentálás', skip: [2, 3, 4], stages: [
     { n: 1, items: [
       { k: 'doc', t: 'Írásos indoklás (üzemzavar, minőségi kockázat, hatósági előírás)', who: ['REQ'], ev: 'Vészhelyzeti beszerzés indítva' },
       { k: 'gate', t: 'Vészhelyzeti beszerzés jóváhagyása – akár szóban, utólagos írásos megerősítéssel', who: [{ when: C.LOW, who: ['CCS'] }, { when: C.HIGH, who: ['CEO'] }], ev: APPROVED },
       { k: 'step', t: 'Azonnali megrendelés', who: ['OWN'] },
     ] },
-    { n: 6, items: [
+    { n: 5, items: [
       { k: 'doc', t: 'Vészhelyzeti jegyzőkönyv (6. melléklet) – 5 munkanapon belül', who: ['OWN'] },
       { k: 'doc', t: 'SS indoklás űrlap – 5 munkanapon belül', who: ['OWN'] },
       { k: 'step', t: 'Beérkezett ajánlat(ok) rögzítése – 5 munkanapon belül', who: ['OWN'] },
       { k: 'doc', t: 'Visszamenőleges PO, dokumentált indoklással – 5 munkanapon belül', who: ['OWN'] },
-      { k: 'doc', t: 'Teljesítésigazolás', who: ['REQ'] },
-      { k: 'doc', t: 'Számla és adategyezőség', who: ['OWN'] },
       { k: 'decision', t: 'Megvan minden 5 munkanapon belül?', who: ['AUTO'], br: [['igen', 'lezárható'], ['nem', 'státusz: „Dokumentáció hiányos”']] },
     ] },
   ] },

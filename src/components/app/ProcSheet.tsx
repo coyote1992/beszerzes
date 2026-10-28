@@ -85,12 +85,12 @@ const Card = ({ title, sub, right, children, className }: { title: string; sub?:
 /* ---------- overview ---------- */
 function Overview({ p }: { p: any }) {
   const it = checklist(p), done = it.filter((i: any) => i.done).length, st = statusOf(p), sk = skipped(p)
-  const nx = p.stage < 6 ? STAGES[nextStage(p) - 1] : null
+  const nx = p.stage < STAGES.length ? STAGES[nextStage(p) - 1] : null
   const Fact = ({ l, v }: { l: string; v: ReactNode }) => <div className="rounded-lg border bg-card p-2.5"><div className="text-xs text-muted-foreground">{l}</div><div className="mt-0.5 text-sm font-medium leading-snug">{v}</div></div>
   return (
     <>
       <div className="mb-3 rounded-lg border bg-card p-3">
-        <Stepper value={p.closed ? 6 : p.stage - 1} className="gap-2">
+        <Stepper value={p.closed ? STAGES.length : p.stage - 1} className="gap-2">
           {STAGES.map((s: string[], i: number) => (
             <Step key={s[0]} className="[&>[data-slot=step-label]]:mt-0">
               <StepIndicator className={cn(i + 1 <= p.stage || p.closed ? `${STAGE_BG[i]} !border-transparent !text-primary-foreground` : '', i + 1 === p.stage && !p.closed && `!ring-4 ring-primary/15`, sk.includes(i + 1) && 'border-dashed opacity-70')} />
@@ -229,7 +229,7 @@ export function ProcSheet() {
   const u = useUI()
   const p = u.open ? S.procs.find((x: any) => x.id === u.open) : null
   const it = p ? checklist(p) : [], miss = it.filter((i: any) => !i.done)
-  const last = p?.stage === 6
+  const last = p?.stage === STAGES.length
   const nd = p ? nextDue(p) : null
   const tasks = p ? S.tasks.filter((t: any) => t.pid === p.id) : []
   const canDelete = p?.test && (S.me?.admin || p.createdBy === S.user)

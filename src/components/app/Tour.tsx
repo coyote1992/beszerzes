@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 type Step = { sel?: string; view?: View; title: string; body: ReactNode }
 
 const STEPS: Step[] = [
-  { title: 'Üdv a Beszerzési központban!', body: <>Az alkalmazás a Fonte Viva Beszerzési Szabályzatát (PROC1–PROC6) vezeti végig: ki mit csinál, mi hiányzik a továbblépéshez, ki hagyja jóvá. Minden adat és fájl a SharePoint „Beszerzés” webhelyére kerül. A bemutató kb. 2 perc.</> },
+  { title: 'Üdv a Beszerzési központban!', body: <>Az alkalmazás a Fonte Viva Beszerzési Szabályzatát (PROC1–PROC5) vezeti végig: ki mit csinál, mi hiányzik a továbblépéshez, ki hagyja jóvá. Minden adat és fájl a SharePoint „Beszerzés” webhelyére kerül. A bemutató kb. 2 perc.</> },
   { sel: 'nav', view: 'dash', title: 'Navigáció', body: <>Bal oldalt éred el az oldalakat. A számok jelzik, hány nyitott tétel vár rád (jóváhagyás, feladat).</> },
   { sel: 'kpis', view: 'dash', title: 'Irányítópult', body: <>Egy pillantással: aktív beszerzések, függő jóváhagyások, közeli határidők. Alatta a folyamat-térkép, a teendőid és az élő szabályzati figyelmeztetések.</> },
   { sel: 'new', view: 'dash', title: 'Új beszerzés indítása', body: <>Itt indul minden (PROC1). Az érték alapján az alkalmazás automatikusan besorol (Egyedi &lt; 2 M, Egyszerű 2–20 M, Kiemelt &gt; 20 M Ft), és kiszámolja a költséghely-jóváhagyót. Gyakorláshoz jelöld be a <b>TESZT</b> opciót – az ilyen beszerzés később nyomtalanul törölhető.</> },

@@ -54,7 +54,7 @@ export const ORGS=[['Somogyvár – karbantartás','1255BS2300'],['Somogyvár �
 export const ccApprover=(cc,v)=>{const c=CC[cc];if(!c)return null;for(let i=0;i<c.b.length;i++){const b=c.b[i];if(v<(b[0]==null?INF:b[0]))return resolveRef(b[1],cc,i);}return CEO;};
 export const typeOf=v=>v<2e6?'Egyedi':v<=2e7?'Egyszerű':'Kiemelt';
 export const TYPEDESC={Egyedi:'< 2 M Ft · egyszerűsített eljárás, 3 ajánlat (max. 2 webáruházi)',Egyszerű:'2–20 M Ft · teljes tender, 3 írásos ajánlat vagy lemondó nyilatkozat',Kiemelt:'> 20 M Ft · teljes tender + BSD + Értékelő Bizottság, jogi és pénzügyi vélemény'};
-export const STAGES=[['PROC1','Igény'],['PROC2','Előkészítés'],['PROC3','Tender'],['PROC4','Kiválasztás'],['PROC5','Szerződés'],['PROC6','Teljesítés']];
+export const STAGES=[['PROC1','Igény'],['PROC2','Előkészítés'],['PROC3','Tender'],['PROC4','Kiválasztás'],['PROC5','Szerződés']];
 export const W={t:.4,c:.6};
 export const DOCS={
  spec:['Beszerzési igény és műszaki specifikáció',1,'docx'],vhReason:['Vészhelyzeti írásos indoklás',1,'docx'],ifsReq:['IFS / minőségi követelmények melléklet',1,'pdf'],msds:['MSDS és DoC',1,'pdf'],
@@ -85,8 +85,8 @@ export const nextId=(prefix,test)=>{const pre=(test?'TESZT-':'')+prefix+'-'+S.to
 /* ===== Documents ===== */
 export const docs=(p,key,bid)=>p.docs.filter(d=>d.key===key&&(bid===undefined||d.bid===bid));
 export const docLatest=(p,key,bid)=>{const a=docs(p,key,bid);return a.length?a[a.length-1]:null;};
-export const skipped=p=>p.proc==='Vészhelyzeti'?[2,3,4,5]:p.proc==='SS'?[3]:[];
-export const nextStage=p=>{let n=p.stage+1;while(skipped(p).includes(n)&&n<6)n++;return n;};
+export const skipped=p=>p.proc==='Vészhelyzeti'?[2,3,4]:p.proc==='SS'?[3]:[];
+export const nextStage=p=>{let n=p.stage+1;while(skipped(p).includes(n)&&n<STAGES.length)n++;return n;};
 export const tcoReq=p=>p.cat==='CAPEX'&&!p.maint;
 
 /* ===== Approvals ===== */
@@ -200,7 +200,7 @@ export function checklist(p){
     dI('ssd','Supplier Selection Document (SSD) – eredmény, megtakarítás, kockázatok',p.owner,{blocked:!docLatest(p,'ssd')&&!p.nego?'A tárgyalás rögzítése után generálható':null,acts:[{a:'genSSD',l:docLatest(p,'ssd')?'Újragenerálás':'SSD generálása',p:!docLatest(p,'ssd')},{a:'doc',k:'ssd',l:'Feltöltés'}]});
     aI('ssd','SSD jóváhagyása (az igénylő nem szavazhat)');
   }
-  if(s===5){
+  if(s===5&&!VH){
     push({id:'ctype',label:'Szerződéstípus kiválasztása (PO / ICO / FCO / előrevásárlás / csatlakozási)',who:p.owner,done:!!p.contractType,ev:p.contractType||'',acts:p.contractType?[]:[{a:'ctype',l:'Kiválasztás',p:true}]});
     dI('contractFinal','Szerződés / PO-dokumentum végleges tervezete',p.owner);
     if(t==='Kiemelt'){dI('legalOp','Jogi vélemény a szerződéstervezetről (20 M Ft felett, 5 munkanapon belül)',p.owner);dI('finOp','Pénzügyi vélemény a szerződéstervezetről (20 M Ft felett, 5 munkanapon belül)',p.owner);}
@@ -209,20 +209,10 @@ export function checklist(p){
     aI('sign','Cégszerű aláírás jóváhagyása (CEO + CFO együttesen)',{blocked:!sg.requested&&!docLatest(p,'contractFinal')?'Előbb töltse fel a szerződés végleges tervezetét':(!sg.requested&&!pre?'A jogi és pénzügyi vélemény szükséges':null)});
     dI('contractSigned','Aláírt példány (Netlock e-aláírás vagy papír + szkennelt másolat)',p.owner,{blocked:!docLatest(p,'contractSigned')&&sg.status!=='approved'?'Az aláírás-jóváhagyás után tölthető fel':null});
   }
-  if(s===6){
-    if(VH){const due=addWD(p.vhDate,5);
-      dI('vhProtocol','Vészhelyzeti jegyzőkönyv (6. melléklet)',p.owner,{short:'Vészhelyzeti dokumentáció lezárása',due});dI('ssForm',dl('ssForm'),p.owner,{due});
-      push({id:'quote',label:'Beérkezett ajánlat(ok) rögzítve',who:p.owner,due,done:p.docs.some(d=>d.key==='bid'),acts:[{a:'tab',k:'bids',l:'Ajánlatok'}]});
-      dI('po','Visszamenőleges PO (dokumentált indoklással)',p.owner,{due});dI('perfCert',dl('perfCert'),p.requester);dI('invoice','Számla és adategyezőség',p.owner);
-    }else{
-      fI('mdm','Törzsadatok: beszállítói törzs, cikkszám, fizetési feltételek (BC)',MDM);
-      if(['ICO','FCO','Előrevásárlás'].some(x=>(p.contractType||'').startsWith(x)))push({id:'bc',label:'Szerződés rögzítése BC-ben (összeg, érvényesség, dokumentumok)',who:p.owner,done:!!p.f.bc,ev:p.f.bc?`BC: ${p.f.bc.note} · ${nm(p.f.bc.by)}`:'',acts:p.f.bc?[]:[{a:'input',k:'bc',l:'Rögzítés',p:true}]});
-      push({id:'po',label:'PO kibocsátása (minden beszerzés PO-val kezdődik)',short:'PO kibocsátása',who:p.owner,done:!!p.f.po,ev:p.f.po?`PO: ${p.f.po.note} · ${nm(p.f.po.by)}`:'',blocked:!p.f.po&&!p.f.mdm?'Előbb a törzsadatok ellenőrzése szükséges':null,acts:p.f.po?[]:[{a:'input',k:'po',l:'PO rögzítése',p:true}]});
-      fI('goods','Mennyiségi átvétel',p.requester);
-      if(p.ifs)fI('qc','Minőségi átvétel: COA / DoC, karantén és dokumentált felszabadítás',MI);
-      dI('perfCert',dl('perfCert'),p.requester);
-      fI('invoice','Számla adategyezőség ellenőrzése a szerződéssel / PO-val',p.owner,{blocked:!p.f.invoice&&!docLatest(p,'perfCert')?'Számla csak igazolt teljesítés után fizethető':null});
-    }
+  if(s===5&&VH){const due=addWD(p.vhDate,5);
+    dI('vhProtocol','Vészhelyzeti jegyzőkönyv (6. melléklet)',p.owner,{short:'Vészhelyzeti dokumentáció lezárása',due});dI('ssForm',dl('ssForm'),p.owner,{due});
+    push({id:'quote',label:'Beérkezett ajánlat(ok) rögzítve',who:p.owner,due,done:p.docs.some(d=>d.key==='bid'),acts:[{a:'tab',k:'bids',l:'Ajánlatok'}]});
+    dI('po','Visszamenőleges PO (dokumentált indoklással)',p.owner,{due});
   }
   return L;
 }
@@ -231,15 +221,15 @@ export function statusOf(p){
   if(p.closed)return p.closed.failed?{l:'Sikertelen',t:'bad'}:{l:'Lezárt',t:'ok'};
   const it=checklist(p);
   const rej=it.find(i=>i.appr&&i.appr.status==='rejected');if(rej)return {l:'Elutasítva – javítás szükséges',t:'bad'};
-  if(p.proc==='Vészhelyzeti'&&p.stage===6&&it.some(i=>!i.done&&i.due&&i.due<=S.today))return {l:'Dokumentáció hiányos',t:'bad'};
+  if(p.proc==='Vészhelyzeti'&&p.stage===5&&it.some(i=>!i.done&&i.due&&i.due<=S.today))return {l:'Dokumentáció hiányos',t:'bad'};
   const pa=it.find(i=>i.appr&&i.appr.requested&&i.appr.status==='pending');
   if(pa)return {l:(pa.appr.key==='ssd'||pa.appr.key==='ss')?'Döntésre vár':'Jóváhagyásra vár',t:'warn'};
   if(p.stage===3&&p.f.sent&&!p.f.opened)return {l:'Ajánlattétel folyamatban',t:'inf'};
   if(p.stage===3&&p.f.opened)return {l:'Értékelés alatt',t:'pur'};
-  if(p.proc==='Vészhelyzeti'&&p.stage===6)return {l:'Dokumentáció hiányos',t:'bad'};
+  if(p.proc==='Vészhelyzeti'&&p.stage===5)return {l:'Utólagos dokumentáció',t:'warn'};
   return {l:p.stage===1?'Igény előkészítése':'Előkészítés alatt',t:'mut'};
 }
-export function nextDue(p){if(p.closed)return {date:p.closed.ts.slice(0,10),text:p.closed.failed?'Sikertelen eljárás':'Nincs nyitott feladat'};const i=nextItem(p);if(!i)return {date:p.due[p.stage]||null,text:'Továbbléphet: '+(p.stage<6?STAGES[nextStage(p)-1][1]:'lezárás')};return {date:i.due||p.due[p.stage]||null,text:i.short||i.label,item:i};}
+export function nextDue(p){if(p.closed)return {date:p.closed.ts.slice(0,10),text:p.closed.failed?'Sikertelen eljárás':'Nincs nyitott feladat'};const i=nextItem(p);if(!i)return {date:p.due[p.stage]||null,text:'Továbbléphet: '+(p.stage<STAGES.length?STAGES[nextStage(p)-1][1]:'lezárás')};return {date:i.due||p.due[p.stage]||null,text:i.short||i.label,item:i};}
 
 /* ===== Compliance panel ===== */
 export function rules(p){

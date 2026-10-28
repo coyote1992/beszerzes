@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { S, typeOf, STAGES, nm, unassigned, rolesOf, CEO, CFO } from '@/engine/engine.js'
+import { S, typeOf, STAGES, nm, unassigned, CEO, CFO } from '@/engine/engine.js'
 import { cn } from '@/lib/utils'
 
 export const SC = (n: number) => `s${Math.min(6, Math.max(1, n))}`
@@ -43,4 +43,4 @@ export function Person({ name, sub, size = 'sm' }: { name: string; sub?: string;
 export const People = ({ who }: { who: string }) => <span className="inline-flex flex-wrap gap-x-3 gap-y-1">{String(who || '').split(' + ').filter(Boolean).map((n) => <Person key={n} name={n} />)}</span>
 export const fixName = (n: string) => (n === CEO ? 'CEO' : n === CFO ? 'CFO' : nm(n))
 export const activePeople = () => (S?.people || []).filter((p: any) => p.active !== false).sort((a: any, b: any) => a.name.localeCompare(b.name, 'hu'))
-export const peopleOpts = (withEmpty?: string): [string, string][] => [...(withEmpty !== undefined ? [['', withEmpty] as [string, string]] : []), ...activePeople().map((p: any) => [p.email, `${p.name}${rolesOf(p.email).length ? ' – ' + rolesOf(p.email).join(', ') : ''}`] as [string, string])]
+export const peopleOpts = (withEmpty?: string): [string, string][] => [...(withEmpty !== undefined ? [['', withEmpty] as [string, string]] : []), ...activePeople().map((p: any) => [p.email, p.name] as [string, string])]
