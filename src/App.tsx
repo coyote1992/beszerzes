@@ -11,6 +11,7 @@ import { Approvals, Audit, Policy, Procurements, Settings, Tasks } from '@/compo
 import { ProcSheet } from '@/components/app/ProcSheet'
 import { Dialogs } from '@/components/app/Dialogs'
 import { Tour } from '@/components/app/Tour'
+import { DecisionTree } from '@/components/app/Tree'
 
 const REFRESH_MS = 90_000
 const login = () => location.replace('/api/auth/login?returnTo=' + encodeURIComponent(location.pathname + location.search))
@@ -95,6 +96,7 @@ export default function App() {
         {u.view === 'tasks' && <Tasks />}
         {u.view === 'audit' && <Audit />}
         {u.view === 'policy' && <Policy />}
+        {u.view === 'tree' && <DecisionTree />}
         {u.view === 'settings' && <Settings />}
       </Shell>
       <ProcSheet />

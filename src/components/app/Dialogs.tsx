@@ -1,12 +1,12 @@
 import { useState, type ReactNode } from 'react'
 import { LockIcon } from 'blode-icons-react'
-import { log } from '@/engine/engine.js'
+import { log, applyRoles, isBuiltinRole, ROLE_LABEL } from '@/engine/engine.js'
 import {
   S, ORGS, CC, DOCS, SCM, nm, TYPEDESC, ccApprover, typeOf, P, docLatest, ranking, validBids, ft, fDay, addD, addWD, dl, apprState, ATITLE,
 } from '@/engine/engine.js'
 import * as C from '@/engine/commands.js'
 import { notify } from '@/engine/notify.js'
-import { closeDlg, commit, run, setUI, useUI } from '@/lib/store'
+import { closeDlg, commit, openDlg, run, setUI, useUI } from '@/lib/store'
 import { flush, loadAll } from '@/lib/sync'
 import { cleanHtml } from '@/lib/html'
 import { uploadFile } from '@/lib/files'
@@ -239,6 +239,41 @@ function ViewDoc({ pid, id }: { pid: string; id: string }) {
     {d.url ? <a href={d.url} target="_blank" rel="noreferrer" className="text-sm font-medium underline underline-offset-2">Megnyitás SharePointban ↗</a> : <span className="text-sm text-muted-foreground">A fájl a következő mentéskor kerül fel a SharePointba.</span>}
     {d.content && <div className="prose-doc rounded-lg border p-4 text-sm" dangerouslySetInnerHTML={{ __html: cleanHtml(d.content) }} />}</>} />
 }
+const ccUses = (k: string) => Object.values<any>(S.cc || {}).reduce((n, c) => n + c.b.filter((b: any[]) => b[1] === 'role:' + k).length, 0)
+function RoleDialog({ k }: { k?: string }) {
+  const cur = k ? (S.roleDefs || []).find((r: any) => r.key === k) : null
+  return <FormDialog kicker="Beállítások" title={cur ? 'Szerepkör szerkesztése' : 'Új szerepkör'} ok={cur ? 'Mentés' : 'Létrehozás'}
+    initial={{ label: cur?.label || '', desc: cur?.desc || '', person: k ? S.roles[k] || '' : '' }}
+    before={<Note>A saját szerepkört személyhez rendelheted, és a költséghely-sávoknál jóváhagyóként választhatod (pl. „Karbantartási vezető – Somogyvár”, „Értékelő Bizottság elnöke”).</Note>}
+    fields={[{ name: 'label', full: true, label: 'Megnevezés' }, { name: 'desc', full: true, label: 'Feladata (opcionális)', kind: 'textarea', rows: 2 }, { name: 'person', full: true, label: 'Személy', kind: 'select', opts: peopleOpts('– nincs kijelölve –') }]}
+    after={() => cur ? <button type="button" className="self-start text-sm text-destructive hover:underline" onClick={() => openDlg({ type: 'roledel', key: k })}>Szerepkör törlése…</button> : null}
+    onSubmit={(v) => {
+      const label = String(v.label || '').trim()
+      if (!label) return 'Adj meg megnevezést.'
+      if (Object.entries<string>(ROLE_LABEL).some(([key, l]) => key !== k && l.toLowerCase() === label.toLowerCase())) return 'Ilyen nevű szerepkör már van.'
+      const key = k || 'R' + Date.now().toString(36).toUpperCase()
+      const def = { key, label, desc: String(v.desc || '').trim() }
+      S.roleDefs = cur ? S.roleDefs.map((r: any) => (r.key === key ? def : r)) : [...(S.roleDefs || []), def]
+      S.roles = { ...S.roles }; if (v.person) S.roles[key] = v.person; else delete S.roles[key]
+      applyRoles()
+      log('', 'Beállítás', cur ? 'Szerepkör módosítva' : 'Szerepkör létrehozva', `${label}${v.person ? ' · ' + v.person : ''}`)
+      commit()
+    }} />
+}
+function RoleDelete({ k }: { k: string }) {
+  const n = ccUses(k), label = ROLE_LABEL[k] || k
+  if (isBuiltinRole(k)) return <FormDialog title="Beépített szerepkör nem törölhető" noOk />
+  return <FormDialog kicker="Beállítások" title={`„${label}” törlése`} ok="Törlés" danger
+    before={<Note tone={n ? 'warn' : 'inf'}>{n ? `${n} költséghely-sáv jóváhagyója ez a szerepkör – törlés után ezek „nincs kijelölve” állapotba kerülnek, és újra ki kell jelölni őket.` : 'A szerepkör egyetlen költséghely-sávban sem szerepel.'}</Note>}
+    onSubmit={() => {
+      S.roleDefs = (S.roleDefs || []).filter((r: any) => r.key !== k)
+      S.roles = { ...S.roles }; delete S.roles[k]
+      if (n) { S.cc = JSON.parse(JSON.stringify(S.cc)); Object.values<any>(S.cc).forEach((c) => c.b.forEach((b: any[]) => { if (b[1] === 'role:' + k) b[1] = '' })) }
+      applyRoles()
+      log('', 'Beállítás', 'Szerepkör törölve', label + (n ? ` · ${n} költséghely-sáv jóváhagyója törölve` : ''))
+      commit()
+    }} />
+}
 function AddPerson() {
   return <FormDialog kicker="Beállítások" title="Munkatárs hozzáadása" ok="Hozzáadás" initial={{ name: '', email: '', title: '' }}
     before={<Note>Aki egyszer bejelentkezik, automatikusan felkerül a listára. Itt előre is felveheti a kollégákat, hogy szerepkört vagy feladatot kaphassanak.</Note>}
@@ -296,6 +331,8 @@ export function Dialogs() {
     case 'close': return <Close key={k} pid={pid} />
     case 'viewdoc': return <ViewDoc key={k} pid={pid} id={key} />
     case 'person': return <AddPerson key={k} />
+    case 'role': return <RoleDialog key={k} k={key || undefined} />
+    case 'roledel': return <RoleDelete key={k} k={key} />
     case 'deletetest': return <DeleteTest key={k} pid={pid} />
   }
   return null

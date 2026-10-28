@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { ArrowRightIcon, FileDownloadIcon, LockIcon, PlusMediumIcon, ShieldCheckIcon } from 'blode-icons-react'
+import { ArrowRightIcon, EditIcon, FileDownloadIcon, LockIcon, PlusMediumIcon, ShieldCheckIcon } from 'blode-icons-react'
 import {
-  S, STAGES, CC, ROLES, TYPEDESC, ATITLE, ADESC, nf, fdt, fDay, ft, nextDue, pendingFor, rel, short, statusOf, typeOf, fShort, nm, resolveRef, log, applyRoles,
+  S, STAGES, CC, ROLES, TYPEDESC, ATITLE, ADESC, nf, fdt, fDay, ft, nextDue, pendingFor, rel, short, statusOf, typeOf, fShort, nm, resolveRef, log, applyRoles, ROLE_DESC, isBuiltinRole,
 } from '@/engine/engine.js'
 import { csvExport, toggleTask } from '@/engine/commands.js'
 import { notify } from '@/engine/notify.js'
@@ -257,19 +257,24 @@ export function Settings() {
       <PageHead title="Beállítások" sub={admin ? 'Szerepkörök, költséghely-jóváhagyók és munkatársak. Minden módosítás az auditnaplóba kerül.' : 'Csak adminisztrátor módosíthatja – a beállításokat itt megtekintheted.'}
         actions={admin && <Button onClick={() => openDlg({ type: 'person' })}><PlusMediumIcon />Munkatárs hozzáadása</Button>} />
       <div className="mb-4 grid gap-4 xl:grid-cols-2">
-        <Panel i={1} className="overflow-hidden"><PanelHead title="Szerepkörök" sub="A jóváhagyási lépések és értesítések ezekhez a személyekhez kerülnek." />
+        <Panel i={1} className="overflow-hidden"><PanelHead title="Szerepkörök" sub="A jóváhagyási lépések és teendők ezekhez a személyekhez kerülnek. Saját szerepkör költséghely-jóváhagyóként használható."
+          right={admin && <Button size="sm" variant="outline" onClick={() => openDlg({ type: 'role' })}><PlusMediumIcon />Új szerepkör</Button>} />
           <div className="px-4 pb-3" data-tour="roles">
-            {ROLES.map(([r, l]: string[]) => (
-              <div key={r} className="flex items-center justify-between gap-3 border-t py-2 first:border-t-0">
-                <span className="text-sm">{l}</span>
-                <div className="w-64">{admin ? <Sel size="sm" value={S.roles[r] || ''} onChange={(v) => setRole(r, l, v)} options={pOpts} /> : <Person name={S.roles[r] || 'role:' + r} />}</div>
-              </div>))}
+            {ROLES.map(([r, l]: string[]) => { const custom = !isBuiltinRole(r); return (
+              <div key={r} className="flex items-start justify-between gap-3 border-t py-2.5 first:border-t-0">
+                <div className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1.5 text-sm font-medium">{l}{custom && <span className="rounded border px-1 text-[10px] font-normal text-muted-foreground">saját</span>}
+                    {custom && admin && <button aria-label="Szerepkör szerkesztése" title="Szerkesztés / törlés" onClick={() => openDlg({ type: 'role', key: r })} className="grid size-5 place-items-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"><EditIcon className="size-3.5" /></button>}</span>
+                  {ROLE_DESC[r] && <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{ROLE_DESC[r]}</p>}
+                </div>
+                <div className="w-56 shrink-0">{admin ? <Sel size="sm" value={S.roles[r] || ''} onChange={(v) => setRole(r, l, v)} options={pOpts} /> : <Person name={S.roles[r] || 'role:' + r} />}</div>
+              </div>) })}
           </div>
         </Panel>
         <Panel i={2} className="overflow-hidden"><PanelHead title="Munkatársak" sub="Aki bejelentkezik a Fonte Viva fiókjával, automatikusan felkerül. Inaktív munkatárs nem léphet be." />
           {people.length === 0 ? <Empty>Még nincs munkatárs.</Empty> : (
             <Table><TableHeader><TableRow><TableHead className="pl-4">Név</TableHead><TableHead>Szerepkör</TableHead><TableHead>Admin</TableHead><TableHead className="pr-4">Aktív</TableHead></TableRow></TableHeader>
-              <TableBody>{people.map((pe: any) => { const self = pe.email === S.user; const roles = ROLES.filter(([r]: string[]) => S.roles[r] === pe.email).map(([r]: string[]) => r); return (
+              <TableBody>{people.map((pe: any) => { const self = pe.email === S.user; const roles = ROLES.filter(([r]: string[]) => S.roles[r] === pe.email).map(([, l]: string[]) => l); return (
                 <TableRow key={pe.email}>
                   <TableCell className="pl-4"><span className="block text-sm font-medium">{pe.name}{self && <span className="ml-1 text-xs font-normal text-muted-foreground">(te)</span>}</span><span className="text-xs text-muted-foreground">{pe.email}{pe.title ? ' · ' + pe.title : ''}</span></TableCell>
                   <TableCell className="text-xs text-muted-foreground">{roles.join(', ') || '–'}</TableCell>

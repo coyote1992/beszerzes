@@ -82,3 +82,6 @@ export declare const typeOf: any
 export declare const uid: any
 export declare const unassigned: any
 export declare const validBids: any
+export declare const BUILTIN_ROLES: any
+export declare const ROLE_DESC: any
+export declare const isBuiltinRole: any

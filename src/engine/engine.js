@@ -21,8 +21,22 @@ export const short=v=>{const o={maximumFractionDigits:2};if(v>=1e9)return (v/1e9
 export const h53=(str,seed=0)=>{let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed;for(let i=0,ch;i<str.length;i++){ch=str.charCodeAt(i);h1=Math.imul(h1^ch,2654435761);h2=Math.imul(h2^ch,1597334677);}h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);return (4294967296*(2097151&h2)+(h1>>>0)).toString(16).padStart(14,'0');};
 
 /* ===== Roles, people, cost centres (configured in Beállítások) ===== */
-export const ROLES=[['CEO','Ügyvezető (CEO)'],['CFO','Pénzügyi igazgató (CFO)'],['SCM','SCM vezető / beszerzés'],['ADM','Tenderadminisztrátor'],['MI','Minőségirányítás / IFS'],['JOGI','Jogi véleményező'],['PENZ','Pénzügy'],['MDM','Törzsadat-kezelés (MDM)'],['RAKT','Raktár']];
-export const ROLE_LABEL=Object.fromEntries(ROLES);
+/* Built-in roles are referenced by the rules below; custom roles (S.roleDefs) can be assigned to people and used as cost-centre approvers. */
+export const BUILTIN_ROLES=[
+ ['CEO','Ügyvezető (CEO)','A CFO-val együtt hagyja jóvá a tenderkiírást és írja alá a szerződéseket; jóváhagyja a 2 M Ft feletti megrendeléseket és vészhelyzeti beszerzéseket, kiemelt beszerzésnél az SS-t és az SSD-t; a legtöbb költséghely felső sávja.'],
+ ['CFO','Pénzügyi igazgató (CFO)','A CEO-val együtt hagyja jóvá a tenderkiírást és írja alá a szerződéseket; kiemelt beszerzésnél SS és SSD; egyedül ő engedélyezhet előleget bankgarancia nélkül.'],
+ ['SCM','SCM vezető / beszerzés','A beszerzési rendszer gazdája: alapértelmezett felelős beszerző, kiemelt igényt jóváhagy, egyetlen érvényes ajánlatnál dönt (SS-átsorolás vagy újratender), sikertelenné nyilváníthatja az eljárást.'],
+ ['ADM','Tenderadminisztrátor','Egyedül ő kezeli az arajanlat@fonteviva.hu postafiókot: rögzíti a beérkező ajánlatokat, a határidő után bont és bontási jegyzőkönyvet készít, kiemelt tendernél begyűjti a titoktartási nyilatkozatokat.'],
+ ['MI','Minőségirányítás / IFS','IFS-kritikus beszerzésnél kockázatértékelés és minőségi dokumentumok (követelmények, MSDS/DoC, tanúsítványok); új beszállító előminősítése; minőségi átvétel, karantén és felszabadítás.'],
+ ['JOGI','Jogi véleményező','20 M Ft feletti szerződés jogi véleménye 5 munkanapon belül – az aláírás csak utána kérhető.'],
+ ['PENZ','Pénzügy','20 M Ft feletti szerződés pénzügyi véleménye; előlegnél bankgarancia; teljesítés után a számla és a PO/szerződés egyezésének ellenőrzése.'],
+ ['MDM','Törzsadat-kezelés (MDM)','Teljesítés előtt rögzíti/ellenőrzi a Business Centralban a beszállítót, a cikkszámot és a fizetési feltételeket – PO csak ezután adható ki.'],
+ ['RAKT','Raktár','A leszállított tételek mennyiségi átvétele; eltérésnél azonnali jelzés a Beszerzésnek és az MI-nek.'],
+];
+export const isBuiltinRole=k=>BUILTIN_ROLES.some(r=>r[0]===k);
+export let ROLES=BUILTIN_ROLES.map(r=>[r[0],r[1]]);
+export let ROLE_LABEL=Object.fromEntries(ROLES);
+export let ROLE_DESC=Object.fromEntries(BUILTIN_ROLES.map(r=>[r[0],r[2]]));
 export let CEO='role:CEO',CFO='role:CFO',SCM='role:SCM',MI='role:MI',ADM='role:ADM',JOGI='role:JOGI',PENZ='role:PENZ',MDM='role:MDM',RAKT='role:RAKT';
 export const roleRef=r=>(S&&S.roles&&S.roles[r])||'role:'+r;
 export const INF=Infinity;
@@ -37,7 +51,8 @@ export const DEFAULT_CC={
  '1255BS3300':{n:'Csány karbantartás',b:[[2e5,'','Jekkel Tibor'],[5e5,'','Szilágyi László'],[null,'role:CEO','Haász Róbert']]},
  '1255BS3400':{n:'Csány telephely – termelés',b:[[2e5,'','Szilágyi László'],[2e6,'role:SCM','Sándor Dávid'],[null,'role:CEO','Haász Róbert']]}};
 export let CC=DEFAULT_CC;
-export function applyRoles(){CEO=roleRef('CEO');CFO=roleRef('CFO');SCM=roleRef('SCM');MI=roleRef('MI');ADM=roleRef('ADM');JOGI=roleRef('JOGI');PENZ=roleRef('PENZ');MDM=roleRef('MDM');RAKT=roleRef('RAKT');CC=(S&&S.cc)||DEFAULT_CC;}
+export function applyRoles(){const cu=(S&&S.roleDefs)||[];ROLES=[...BUILTIN_ROLES.map(r=>[r[0],r[1]]),...cu.map(r=>[r.key,r.label])];ROLE_LABEL=Object.fromEntries(ROLES);ROLE_DESC=Object.fromEntries([...BUILTIN_ROLES.map(r=>[r[0],r[2]]),...cu.map(r=>[r.key,r.desc||''])]);
+  CEO=roleRef('CEO');CFO=roleRef('CFO');SCM=roleRef('SCM');MI=roleRef('MI');ADM=roleRef('ADM');JOGI=roleRef('JOGI');PENZ=roleRef('PENZ');MDM=roleRef('MDM');RAKT=roleRef('RAKT');CC=(S&&S.cc)||DEFAULT_CC;}
 export const resolveRef=(ref,code,i)=>ref===null?null:(ref&&ref.startsWith('role:')?roleRef(ref.slice(5)):(ref||`cc:${code}:${i}`));
 export const personOf=e=>S&&S.people?S.people.find(p=>p.email===e):null;
 /** Display name for a person key (e-mail), an unassigned role or an unassigned cost-centre band. */
@@ -70,7 +85,7 @@ export function setS(x){S=x;applyRoles();}
 export function save(){}
 const pad2=n=>String(n).padStart(2,'0');
 export const todayLocal=()=>{const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());};
-export const emptyState=()=>({today:todayLocal(),user:'',me:null,procs:[],tasks:[],audit:[],people:[],roles:{},cc:DEFAULT_CC});
+export const emptyState=()=>({today:todayLocal(),user:'',me:null,procs:[],tasks:[],audit:[],people:[],roles:{},roleDefs:[],cc:DEFAULT_CC});
 export const P=id=>S.procs.find(p=>p.id===id);
 export const stamp=()=>S.today+' '+new Date().toTimeString().slice(0,5);
 /** Audit events are numbered and hash-chained on the server; the user is taken from the sign-in session. */

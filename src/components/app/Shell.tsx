@@ -1,6 +1,6 @@
 import { useEffect, useSyncExternalStore, type ReactNode } from 'react'
 import {
-  BookIcon, CalendarCheckIcon, ChecklistIcon, CircleCheckIcon, ClipboardIcon, ClockIcon, CompassRoundIcon, LayoutDashboardIcon,
+  BookIcon, CalendarCheckIcon, GitBranchesIcon, ChecklistIcon, CircleCheckIcon, ClipboardIcon, ClockIcon, CompassRoundIcon, LayoutDashboardIcon,
   DoorIcon, MoonIcon, PlusMediumIcon, SearchMenuIcon, SettingsGear1Icon, SunIcon, TasksIcon, TriangleExclamationIcon,
 } from 'blode-icons-react'
 import { S, STAGES, pendingFor, statusOf, fDay, WDN, pd, short, rolesOf } from '@/engine/engine.js'
@@ -21,9 +21,10 @@ const NAV: NavItem[] = [
   { id: 'tasks', label: 'Feladatok', icon: TasksIcon, count: () => S.tasks.filter((t: any) => !t.done && t.owner === S.user).length },
   { id: 'audit', label: 'Auditnapló', icon: ClockIcon },
   { id: 'policy', label: 'Szabályzat', icon: BookIcon },
+  { id: 'tree', label: 'Döntési fa', icon: GitBranchesIcon },
   { id: 'settings', label: 'Beállítások', icon: SettingsGear1Icon },
 ]
-export const TITLES: Record<View, string> = { dash: 'Irányítópult', procs: 'Beszerzések', appr: 'Jóváhagyásaim', tasks: 'Feladatok', audit: 'Auditnapló', policy: 'Szabályzat', settings: 'Beállítások' }
+export const TITLES: Record<View, string> = { dash: 'Irányítópult', procs: 'Beszerzések', appr: 'Jóváhagyásaim', tasks: 'Feladatok', audit: 'Auditnapló', policy: 'Szabályzat', tree: 'Döntési fa', settings: 'Beállítások' }
 
 function Logo() {
   return (

@@ -54,6 +54,7 @@ function entities(): Ent[] {
   }
   out.push({ t: 'setting', key: 'roles', obj: S._settings.roles, data: S.roles, view: { Title: 'roles' } })
   out.push({ t: 'setting', key: 'cc', obj: S._settings.cc, data: S.cc, view: { Title: 'cc' } })
+  out.push({ t: 'setting', key: 'roleDefs', obj: S._settings.roleDefs, data: { list: S.roleDefs || [] }, view: { Title: 'roleDefs' } })
   return out
 }
 
@@ -85,7 +86,8 @@ export async function loadAll(canApply?: () => boolean): Promise<boolean> {
   s.people = d.people
   s.roles = d.settings.roles?.value || {}
   s.cc = d.settings.cc?.value || DEFAULT_CC
-  s._settings = { roles: { _sp: d.settings.roles?._sp }, cc: { _sp: d.settings.cc?._sp } }
+  s.roleDefs = d.settings.roleDefs?.value?.list || []
+  s._settings = { roles: { _sp: d.settings.roles?._sp }, cc: { _sp: d.settings.cc?._sp }, roleDefs: { _sp: d.settings.roleDefs?._sp } }
   const byPid = (rows: any[]) => rows.reduce((m: Record<string, any[]>, r) => ((m[r.pid] ||= []).push(r), m), {})
   const bidders = byPid(d.bidders), docs = byPid(d.docs)
   const apprs: Record<string, Record<string, any>> = {}

@@ -14,7 +14,7 @@ npm run typecheck:api  # a szerveroldali függvények típusellenőrzése
 
 | Réteg | Hol | Mit csinál |
 | --- | --- | --- |
-| Felület | `src/` (React 19, Vite, Tailwind v4, shadcn + Blode UI) | Irányítópult, beszerzések, jóváhagyások, feladatok, auditnapló, szabályzat, beállítások, bemutató (onboarding) |
+| Felület | `src/` (React 19, Vite, Tailwind v4, shadcn + Blode UI) | Irányítópult, beszerzések, jóváhagyások, feladatok, auditnapló, szabályzat, döntési fa (`src/components/app/Tree.tsx` – a szabálymotorral összhangban tartandó), beállítások (szerepkörök, saját szerepkörök, költséghely-jóváhagyók, munkatársak), bemutató |
 | Szabálymotor | `src/engine/` | Értékhatárok, kötelező dokumentumok, jóváhagyási láncok, PROC-lépések – UI-független |
 | Szinkron | `src/lib/sync.ts` | Minden módosítást pár száz ms után elküld (`/api/sync`); 90 mp-enként frissít, ha nincs nyitott ablak vagy mentetlen adat |
 | Szerver | `api/` (Vercel Functions) | Bejelentkezés, SharePoint-írás/olvasás Microsoft Graph-on keresztül, auditlánc |

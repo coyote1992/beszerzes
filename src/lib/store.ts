@@ -17,7 +17,7 @@ export function run<T>(fn: () => T): T {
 }
 
 /* ---- UI store ---- */
-export type View = 'dash' | 'procs' | 'appr' | 'tasks' | 'audit' | 'policy' | 'settings'
+export type View = 'dash' | 'procs' | 'appr' | 'tasks' | 'audit' | 'policy' | 'tree' | 'settings'
 export type Dlg = { _id?: number; type: string; pid?: string; key?: string; bid?: string; folder?: number; dec?: string } | null
 export const ui = {
   view: 'dash' as View, open: null as string | null, tab: 'ov',
