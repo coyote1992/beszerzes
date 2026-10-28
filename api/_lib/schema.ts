@@ -1,5 +1,5 @@
 // SharePoint list schema, provisioning and row <-> entity mapping.
-import { drive, encPath, gj, graph, pages, site } from './graph.js'
+import { drive, encPath, gj, graph, GraphError, pages, site } from './graph.js'
 
 type Kind = 'text' | 'note' | 'number' | 'date' | 'datetime' | 'bool'
 type Col = { name: string; displayName: string; kind: Kind; hidden?: boolean; indexed?: boolean }
@@ -63,6 +63,11 @@ async function ensureFolder(parentPath: string, name: string) {
   if (!r.ok && r.status !== 409) throw new Error(`Folder create failed (${name}): ${r.body?.error?.message || r.status}`)
 }
 
+const NEEDS_MANAGE = 'Az alkalmazás nem tud listát létrehozni a SharePoint „Beszerzés” webhelyen (Access denied). ' +
+  'Az alkalmazás webhely-engedélyét (Sites.Selected) „write” helyett „manage” szintre kell emelni – a lépések a README „Beállítás” részében. Utána töltsd újra az oldalt.'
+/** Creating lists and columns needs the "manage" site role; "write" only covers items and files. */
+const explain = (e: unknown) => (e instanceof GraphError && e.status === 403 ? new GraphError(403, 'needs_manage', NEEDS_MANAGE) : e)
+
 async function provision(): Promise<Record<string, string>> {
   const existing = await pages(`${site()}/lists?$select=id,displayName`)
   const byName = new Map(existing.map((l: any) => [l.displayName, l.id as string]))
@@ -70,12 +75,12 @@ async function provision(): Promise<Record<string, string>> {
   await Promise.all(Object.entries(LISTS).map(async ([key, def]) => {
     let id = byName.get(def.title)
     if (!id) {
-      const created = await gj(`${site()}/lists`, { method: 'POST', body: JSON.stringify({ displayName: def.title, list: { template: 'genericList' }, columns: def.cols.map(colBody) }) })
+      const created = await gj(`${site()}/lists`, { method: 'POST', body: JSON.stringify({ displayName: def.title, list: { template: 'genericList' }, columns: def.cols.map(colBody) }) }).catch((e) => { throw explain(e) })
       id = created.id as string
     } else {
       const cols = await pages(`${site()}/lists/${id}/columns?$select=name`)
       const have = new Set(cols.map((x: any) => x.name))
-      for (const col of def.cols) if (!have.has(col.name)) await gj(`${site()}/lists/${id}/columns`, { method: 'POST', body: JSON.stringify(colBody(col)) })
+      for (const col of def.cols) if (!have.has(col.name)) await gj(`${site()}/lists/${id}/columns`, { method: 'POST', body: JSON.stringify(colBody(col)) }).catch((e) => { throw explain(e) })
     }
     ids[key] = id
   }))

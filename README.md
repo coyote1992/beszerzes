@@ -54,7 +54,12 @@ Vercel környezeti változók (Production): `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_
 
 Entra ID alkalmazásregisztráció:
 1. **Authentication → Add a platform → Web**, Redirect URI: `https://beszerzes.vercel.app/api/auth/callback`
-2. **API permissions**: Microsoft Graph *Application* `Sites.Selected` (a „Beszerzés” webhelyre **write** joggal megadva) + *Delegated* `openid`, `profile`, `email` (admin consent).
+2. **API permissions**: Microsoft Graph *Application* `Sites.Selected` + *Delegated* `openid`, `profile`, `email` (admin consent).
+   A „Beszerzés” webhelyre az alkalmazásnak **manage** szerepkör kell (a *write* csak elemeket és fájlokat írhat, listát létrehozni nem).
+   Graph Explorerben (SharePoint-/globális adminként, `Sites.FullControl.All` hozzájárulással):
+   - `GET https://graph.microsoft.com/v1.0/sites/<SP_SITE_ID>/permissions` → az alkalmazáshoz tartozó bejegyzés `id`-ja
+   - `PATCH https://graph.microsoft.com/v1.0/sites/<SP_SITE_ID>/permissions/<id>` törzs: `{ "roles": ["manage"] }`
+   - (PnP PowerShell-lel ugyanez: `Set-PnPAzureADAppSitePermission -PermissionId <id> -Permissions Manage`)
 3. Ha csak kijelölt munkatársak léphetnek be: Enterprise applications → az alkalmazás → Properties → *Assignment required = Yes*, majd Users and groups alatt hozzárendelés.
 
 Ha a kliens titok lejár, új titkot kell létrehozni és a `MS_CLIENT_SECRET` értékét frissíteni (a meglévő bejelentkezések ilyenkor érvénytelenné válnak, ha nincs külön `SESSION_SECRET`).
