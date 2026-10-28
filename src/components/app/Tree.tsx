@@ -68,9 +68,9 @@ const proc4 = (ss: boolean): Stage => ({ n: 4, items: [
 const proc5: Stage = { n: 5, items: [
   { k: 'step', t: 'Szerződéstípus: PO · ICO · FCO (max. 3 év) · előrevásárlás · csatlakozási', who: ['OWN'], ev: 'Szerződéstípus kiválasztva' },
   { k: 'doc', t: 'Szerződés / PO-dokumentum végleges tervezete', who: ['OWN'] },
-  { k: 'gate', t: 'Jogi vélemény (5 munkanap)', who: [{ who: ['JOGI'] }], when: C.K, ev: APPROVED },
-  { k: 'gate', t: 'Pénzügyi vélemény (5 munkanap)', who: [{ who: ['PENZ'] }], when: C.K, ev: APPROVED },
-  { k: 'decision', t: 'Előleg biztosítéka?', who: ['PENZ', 'CFO'], when: C.PRE, br: [['Bankgarancia csatolva', 'Pénzügy'], ['Eltérés a bankgaranciától', 'csak CFO írásos engedélyével']] },
+  { k: 'doc', t: 'Jogi vélemény a tervezetről (5 munkanapon belül)', who: ['OWN'], when: C.K },
+  { k: 'doc', t: 'Pénzügyi vélemény a tervezetről (5 munkanapon belül)', who: ['OWN'], when: C.K },
+  { k: 'decision', t: 'Előleg biztosítéka?', who: ['OWN', 'CFO'], when: C.PRE, br: [['Bankgarancia csatolva', 'felelős beszerző'], ['Eltérés a bankgaranciától', 'csak CFO írásos engedélyével']] },
   { k: 'gate', t: 'Cégszerű aláírás', who: [{ who: ['CEO', 'CFO'] }], note: 'kiemeltnél csak a jogi és pénzügyi vélemény után', ev: APPROVED },
   { k: 'doc', t: 'Aláírt példány (Netlock vagy papír + szkennelt)', who: ['OWN'] },
 ] }
@@ -78,10 +78,10 @@ const proc6: Stage = { n: 6, items: [
   { k: 'flag', t: 'Törzsadatok a BC-ben: beszállító, cikkszám, fizetési feltételek', who: ['MDM'] },
   { k: 'step', t: 'Szerződés rögzítése a BC-ben', who: ['OWN'], when: C.BC, ev: 'Szerződés rögzítve BC-ben' },
   { k: 'step', t: 'PO kibocsátása – csak a törzsadatok után', who: ['OWN'], ev: 'PO kibocsátva' },
-  { k: 'flag', t: 'Mennyiségi átvétel', who: ['RAKT'] },
+  { k: 'flag', t: 'Mennyiségi átvétel', who: ['REQ'] },
   { k: 'flag', t: 'Minőségi átvétel: COA / DoC, karantén, felszabadítás', who: ['MI'], when: C.IFS },
   { k: 'doc', t: 'Teljesítésigazolás (9. melléklet)', who: ['REQ'] },
-  { k: 'flag', t: 'Számla egyezése a PO-val / szerződéssel – csak igazolt teljesítés után', who: ['PENZ'] },
+  { k: 'flag', t: 'Számla egyezése a PO-val / szerződéssel – csak igazolt teljesítés után', who: ['OWN'] },
   { k: 'step', t: 'Lezárás – a dokumentumtár zárolva, megőrzés indul', who: ['OWN'], ev: 'Beszerzés lezárva' },
 ] }
 
@@ -97,14 +97,14 @@ const PATHS: Path[] = [
     ] },
     { n: 3, items: [
       { k: 'step', t: 'Ajánlatkérés kiküldése az arajanlat@fonteviva.hu címről, azonos határidővel', who: ['OWN'], ev: 'Ajánlatkérés kiküldve' },
-      { k: 'step', t: 'Ajánlatok és lemondó nyilatkozatok rögzítése (késve: formailag érvénytelen)', who: ['ADM'], ev: 'Ajánlat beérkezett' },
-      { k: 'step', t: 'Bontás a határidő után + bontási jegyzőkönyv – az árak eddig zároltak', who: ['ADM'], ev: 'Ajánlatbontás' },
+      { k: 'step', t: 'Ajánlatok és lemondó nyilatkozatok rögzítése (késve: formailag érvénytelen)', who: ['OWN'], ev: 'Ajánlat beérkezett' },
+      { k: 'step', t: 'Bontás a határidő után + bontási jegyzőkönyv – az árak eddig zároltak', who: ['OWN'], ev: 'Ajánlatbontás' },
       { k: 'decision', t: 'Hány érvényes ajánlat?', who: ['SCM'], br: [['0', 'sikertelen eljárás vagy újratender'], ['1', 'SS-átsorolás (→ PROC4) vagy újratender (→ PROC2, új CEO + CFO jóváhagyás)'], ['2', 'folytatható, a tény az SSD-be kerül'], ['3+', 'normál folytatás']], ev: 'SS-átsorolás / Újratendereztetés' },
       { k: 'step', t: 'Műszaki értékelés (60 pont alatt kizárható)', who: ['REQ'], ev: 'Ajánlat értékelve' },
       { k: 'step', t: 'Kereskedelmi értékelés lezárása (ár, fizetés, szállítás, jótállás)', who: ['OWN'], ev: 'Kereskedelmi értékelés lezárva' },
       { k: 'doc', t: 'TCO / DCF kalkuláció', who: ['OWN'], when: C.TCO },
       { k: 'doc', t: 'Kiértékelési mátrix (műszaki 40% · kereskedelmi 60%) – generálható', who: ['OWN'] },
-      { k: 'flag', t: 'Titoktartási és összeférhetetlenségi nyilatkozatok', who: ['ADM'], when: C.K },
+      { k: 'flag', t: 'Titoktartási és összeférhetetlenségi nyilatkozatok (ÉB-tagok)', who: ['OWN'], when: C.K },
     ] },
     proc4(false), proc5, proc6,
   ] },
@@ -133,14 +133,14 @@ const PATHS: Path[] = [
       { k: 'step', t: 'Beérkezett ajánlat(ok) rögzítése – 5 munkanapon belül', who: ['OWN'] },
       { k: 'doc', t: 'Visszamenőleges PO, dokumentált indoklással – 5 munkanapon belül', who: ['OWN'] },
       { k: 'doc', t: 'Teljesítésigazolás', who: ['REQ'] },
-      { k: 'doc', t: 'Számla és adategyezőség', who: ['PENZ'] },
+      { k: 'doc', t: 'Számla és adategyezőség', who: ['OWN'] },
       { k: 'decision', t: 'Megvan minden 5 munkanapon belül?', who: ['AUTO'], br: [['igen', 'lezárható'], ['nem', 'státusz: „Dokumentáció hiányos”']] },
     ] },
   ] },
 ]
 
 /* ---------- people ---------- */
-const SHORT: Record<string, string> = { REQ: 'Igénylő', OWN: 'Felelős beszerző', CC: 'Költséghely-jóváhagyó', CCS: 'Költséghely-jóváhagyó', AUTO: 'Automatikus', CEO: 'CEO', CFO: 'CFO', SCM: 'SCM vezető', ADM: 'Tenderadmin.', MI: 'MI / IFS', JOGI: 'Jogi', PENZ: 'Pénzügy', MDM: 'MDM', RAKT: 'Raktár' }
+const SHORT: Record<string, string> = { REQ: 'Igénylő', OWN: 'Felelős beszerző', CC: 'Költséghely-jóváhagyó', CCS: 'Költséghely-jóváhagyó', AUTO: 'Automatikus', CEO: 'CEO', CFO: 'CFO', SCM: 'SCM vezető', MI: 'MI / IFS', MDM: 'MDM' }
 type Ctx = { v: V; mode: 'all' | 'case'; p?: any; ev: boolean }
 function resolveWho(w: Who, x: Ctx): { label: string; title: string } {
   const base = SHORT[w] || ROLE_LABEL[w] || w
@@ -247,7 +247,7 @@ const RIGHTS: [string, string, string][] = [
   ['Műszaki kritériumok módosítása tender közben', 'CEO + CFO együtt', 'Tender · PROC3 (szabályzat 9.3.3)'],
   ['Beszállító-kiválasztás (SSD)', 'Költséghely-jóváhagyó (Egyedi, Egyszerű) · CEO + CFO (Kiemelt) – az igénylő nem szavazhat', 'Tender, SS · PROC4'],
   ['Sikertelen eljárás', 'SCM vezető, indoklással', 'Bármikor (keret túllépés, műszaki alkalmatlanság)'],
-  ['Jogi és pénzügyi vélemény', 'Jogi + Pénzügy, 5 munkanapon belül', 'Kiemelt · PROC5'],
+  ['Jogi és pénzügyi vélemény', 'Jogi és pénzügyi szakértő 5 munkanapon belül; a felelős beszerző csatolja – aláírás csak utána', 'Kiemelt · PROC5'],
   ['Előleg bankgarancia nélkül', 'Kizárólag CFO, írásban', 'Előleges szerződés · PROC5'],
   ['Cégszerű aláírás / szándéknyilatkozat (LoI)', 'CEO + CFO együtt', 'Tender, SS · PROC5'],
   ['Eltérés a 3 írásos ajánlattól', 'CEO írásban', 'Egyedi (szabályzat 9.2.3)'],

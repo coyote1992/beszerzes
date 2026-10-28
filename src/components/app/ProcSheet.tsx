@@ -211,7 +211,7 @@ function Mail({ p }: { p: any }) {
   const open = p.f.sent && !p.f.opened && !p.closed
   return (
     <>
-      <div className={cn('mb-3 rounded-lg border p-3 text-sm', open ? 'bg-muted' : 'bg-muted/50 text-muted-foreground')}><b>arajanlat@fonteviva.hu</b> – zárt tendercsatorna. Hozzáférés kizárólag a kijelölt beszerzési adminisztrátornak, csak kiírás, bontás és értékelés időszakában. Jelenleg: <b>{open ? 'nyitott (tender folyamatban)' : 'nem használt ennél a beszerzésnél'}</b>.</div>
+      <div className={cn('mb-3 rounded-lg border p-3 text-sm', open ? 'bg-muted' : 'bg-muted/50 text-muted-foreground')}><b>arajanlat@fonteviva.hu</b> – zárt tendercsatorna. Csak a kiírás, bontás és értékelés időszakában használható. Jelenleg: <b>{open ? 'nyitott (tender folyamatban)' : 'nem használt ennél a beszerzésnél'}</b>.</div>
       {p.mail.length === 0 ? <Empty>Nincs levelezés.</Empty> : p.mail.slice().reverse().map((m: any, i: number) => (
         <Card key={i} title={`${m.dir === 'out' ? '↗ Kimenő' : '↙ Bejövő'}: ${m.subj}`} sub={`${fdt(m.ts)} · ${m.from} → ${m.to}`}>
           <div className="px-4 pb-3 text-sm">{m.body && <p className="mb-2 whitespace-pre-wrap">{m.body}</p>}<div className="flex flex-wrap gap-1.5">{m.att?.map((a: string) => <Chip key={a} tone="inf"><FileTextIcon className="size-3" />{m.dir === 'in' && !bidVisible(p) ? '🔒 melléklet zárolva a bontásig' : a}</Chip>)}</div></div>

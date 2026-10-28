@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ArrowRightIcon, EditIcon, FileDownloadIcon, LockIcon, PlusMediumIcon, ShieldCheckIcon } from 'blode-icons-react'
 import {
-  S, STAGES, CC, ROLES, TYPEDESC, ATITLE, ADESC, nf, fdt, fDay, ft, nextDue, pendingFor, rel, short, statusOf, typeOf, fShort, nm, resolveRef, log, applyRoles, ROLE_DESC, isBuiltinRole,
+  S, STAGES, CC, ROLES, TYPEDESC, ATITLE, ADESC, nf, fdt, fDay, ft, nextDue, pendingFor, rel, short, statusOf, typeOf, fShort, nm, resolveRef, log, applyRoles, isBuiltinRole,
 } from '@/engine/engine.js'
 import { csvExport, toggleTask } from '@/engine/commands.js'
 import { notify } from '@/engine/notify.js'
@@ -261,11 +261,10 @@ export function Settings() {
           right={admin && <Button size="sm" variant="outline" onClick={() => openDlg({ type: 'role' })}><PlusMediumIcon />Új szerepkör</Button>} />
           <div className="px-4 pb-3" data-tour="roles">
             {ROLES.map(([r, l]: string[]) => { const custom = !isBuiltinRole(r); return (
-              <div key={r} className="flex items-start justify-between gap-3 border-t py-2.5 first:border-t-0">
+              <div key={r} className="flex items-center justify-between gap-3 border-t py-2 first:border-t-0">
                 <div className="min-w-0 flex-1">
                   <span className="flex items-center gap-1.5 text-sm font-medium">{l}{custom && <span className="rounded border px-1 text-[10px] font-normal text-muted-foreground">saját</span>}
                     {custom && admin && <button aria-label="Szerepkör szerkesztése" title="Szerkesztés / törlés" onClick={() => openDlg({ type: 'role', key: r })} className="grid size-5 place-items-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"><EditIcon className="size-3.5" /></button>}</span>
-                  {ROLE_DESC[r] && <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{ROLE_DESC[r]}</p>}
                 </div>
                 <div className="w-56 shrink-0">{admin ? <Sel size="sm" value={S.roles[r] || ''} onChange={(v) => setRole(r, l, v)} options={pOpts} /> : <Person name={S.roles[r] || 'role:' + r} />}</div>
               </div>) })}

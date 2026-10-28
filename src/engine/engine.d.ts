@@ -1,6 +1,5 @@
 /* generated loose typings for the JS engine */
 export declare const ADESC: any
-export declare const ADM: any
 export declare const ATITLE: any
 export declare const BOUND: any
 export declare const CC: any
@@ -10,15 +9,12 @@ export declare const DEFAULT_CC: any
 export declare const DOCS: any
 export declare const FOLDERS: any
 export declare const INF: any
-export declare const JOGI: any
 export declare const MDM: any
 export declare const MI: any
 export declare const MON: any
 export declare const MONL: any
 export declare const ORGS: any
 export declare const P: any
-export declare const PENZ: any
-export declare const RAKT: any
 export declare const ROLES: any
 export declare const ROLE_LABEL: any
 export declare const S: any
@@ -83,5 +79,4 @@ export declare const uid: any
 export declare const unassigned: any
 export declare const validBids: any
 export declare const BUILTIN_ROLES: any
-export declare const ROLE_DESC: any
 export declare const isBuiltinRole: any

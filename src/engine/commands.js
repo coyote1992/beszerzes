@@ -23,7 +23,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const tbl = (h, rows) => `<table><tr>${h.map((x) => `<th>${x}</th>`).join('')}</tr>${rows.map((r) => `<tr>${r.map((x) => `<td>${x}</td>`).join('')}</tr>`).join('')}</table>`
 export const tcoCalc = (v) => { let s = v.c0; for (let i = 1; i <= v.n; i++) s += v.k / Math.pow(1 + v.r, i); return s - v.res / Math.pow(1 + v.r, v.n) }
 export function openingHTML(p) {
-  return `<h4>Bontási jegyzőkönyv – ${esc(p.id)}</h4><p>Bontás időpontja: ${fDay(p.f.opened.ts.slice(0, 10))} ${p.f.opened.ts.slice(11)} · jelen: ${esc(p.f.opened.by)} (adminisztrátor)</p>` +
+  return `<h4>Bontási jegyzőkönyv – ${esc(p.id)}</h4><p>Bontás időpontja: ${fDay(p.f.opened.ts.slice(0, 10))} ${p.f.opened.ts.slice(11)} · rögzítette: ${esc(nm(p.f.opened.by))}</p>` +
     tbl(['Ajánlattevő', 'Beérkezés', 'Formai megfelelés', 'Ár (nettó)'], p.bidders.map((b) => [esc(b.name), b.recv || 'nem érkezett', b.status === 'lemondó' ? 'lemondó nyilatkozat' : b.formal ? 'megfelelő' : b.status === 'beérkezett' ? 'nem megfelelő' + (b.late ? ' (késve)' : '') : '–', b.price ? ft(b.price) : '–']))
 }
 export function matrixHTML(p) {

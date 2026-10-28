@@ -22,22 +22,11 @@ export const h53=(str,seed=0)=>{let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed;for(le
 
 /* ===== Roles, people, cost centres (configured in Beállítások) ===== */
 /* Built-in roles are referenced by the rules below; custom roles (S.roleDefs) can be assigned to people and used as cost-centre approvers. */
-export const BUILTIN_ROLES=[
- ['CEO','Ügyvezető (CEO)','A CFO-val együtt hagyja jóvá a tenderkiírást és írja alá a szerződéseket; jóváhagyja a 2 M Ft feletti megrendeléseket és vészhelyzeti beszerzéseket, kiemelt beszerzésnél az SS-t és az SSD-t; a legtöbb költséghely felső sávja.'],
- ['CFO','Pénzügyi igazgató (CFO)','A CEO-val együtt hagyja jóvá a tenderkiírást és írja alá a szerződéseket; kiemelt beszerzésnél SS és SSD; egyedül ő engedélyezhet előleget bankgarancia nélkül.'],
- ['SCM','SCM vezető / beszerzés','A beszerzési rendszer gazdája: alapértelmezett felelős beszerző, kiemelt igényt jóváhagy, egyetlen érvényes ajánlatnál dönt (SS-átsorolás vagy újratender), sikertelenné nyilváníthatja az eljárást.'],
- ['ADM','Tenderadminisztrátor','Egyedül ő kezeli az arajanlat@fonteviva.hu postafiókot: rögzíti a beérkező ajánlatokat, a határidő után bont és bontási jegyzőkönyvet készít, kiemelt tendernél begyűjti a titoktartási nyilatkozatokat.'],
- ['MI','Minőségirányítás / IFS','IFS-kritikus beszerzésnél kockázatértékelés és minőségi dokumentumok (követelmények, MSDS/DoC, tanúsítványok); új beszállító előminősítése; minőségi átvétel, karantén és felszabadítás.'],
- ['JOGI','Jogi véleményező','20 M Ft feletti szerződés jogi véleménye 5 munkanapon belül – az aláírás csak utána kérhető.'],
- ['PENZ','Pénzügy','20 M Ft feletti szerződés pénzügyi véleménye; előlegnél bankgarancia; teljesítés után a számla és a PO/szerződés egyezésének ellenőrzése.'],
- ['MDM','Törzsadat-kezelés (MDM)','Teljesítés előtt rögzíti/ellenőrzi a Business Centralban a beszállítót, a cikkszámot és a fizetési feltételeket – PO csak ezután adható ki.'],
- ['RAKT','Raktár','A leszállított tételek mennyiségi átvétele; eltérésnél azonnali jelzés a Beszerzésnek és az MI-nek.'],
-];
+export const BUILTIN_ROLES=[['CEO','Ügyvezető (CEO)'],['CFO','Pénzügyi igazgató (CFO)'],['SCM','SCM vezető / beszerzés'],['MI','Minőségirányítás / IFS'],['MDM','Törzsadat-kezelés (MDM)']];
 export const isBuiltinRole=k=>BUILTIN_ROLES.some(r=>r[0]===k);
 export let ROLES=BUILTIN_ROLES.map(r=>[r[0],r[1]]);
 export let ROLE_LABEL=Object.fromEntries(ROLES);
-export let ROLE_DESC=Object.fromEntries(BUILTIN_ROLES.map(r=>[r[0],r[2]]));
-export let CEO='role:CEO',CFO='role:CFO',SCM='role:SCM',MI='role:MI',ADM='role:ADM',JOGI='role:JOGI',PENZ='role:PENZ',MDM='role:MDM',RAKT='role:RAKT';
+export let CEO='role:CEO',CFO='role:CFO',SCM='role:SCM',MI='role:MI',MDM='role:MDM';
 export const roleRef=r=>(S&&S.roles&&S.roles[r])||'role:'+r;
 export const INF=Infinity;
 /* Cost centres and approval bands (11. melléklet). Band = [upper limit (null = no limit), approver ref, hint from the policy].
@@ -51,8 +40,8 @@ export const DEFAULT_CC={
  '1255BS3300':{n:'Csány karbantartás',b:[[2e5,'','Jekkel Tibor'],[5e5,'','Szilágyi László'],[null,'role:CEO','Haász Róbert']]},
  '1255BS3400':{n:'Csány telephely – termelés',b:[[2e5,'','Szilágyi László'],[2e6,'role:SCM','Sándor Dávid'],[null,'role:CEO','Haász Róbert']]}};
 export let CC=DEFAULT_CC;
-export function applyRoles(){const cu=(S&&S.roleDefs)||[];ROLES=[...BUILTIN_ROLES.map(r=>[r[0],r[1]]),...cu.map(r=>[r.key,r.label])];ROLE_LABEL=Object.fromEntries(ROLES);ROLE_DESC=Object.fromEntries([...BUILTIN_ROLES.map(r=>[r[0],r[2]]),...cu.map(r=>[r.key,r.desc||''])]);
-  CEO=roleRef('CEO');CFO=roleRef('CFO');SCM=roleRef('SCM');MI=roleRef('MI');ADM=roleRef('ADM');JOGI=roleRef('JOGI');PENZ=roleRef('PENZ');MDM=roleRef('MDM');RAKT=roleRef('RAKT');CC=(S&&S.cc)||DEFAULT_CC;}
+export function applyRoles(){const cu=(S&&S.roleDefs)||[];ROLES=[...BUILTIN_ROLES.map(r=>[r[0],r[1]]),...cu.map(r=>[r.key,r.label])];ROLE_LABEL=Object.fromEntries(ROLES);
+  CEO=roleRef('CEO');CFO=roleRef('CFO');SCM=roleRef('SCM');MI=roleRef('MI');MDM=roleRef('MDM');CC=(S&&S.cc)||DEFAULT_CC;}
 export const resolveRef=(ref,code,i)=>ref===null?null:(ref&&ref.startsWith('role:')?roleRef(ref.slice(5)):(ref||`cc:${code}:${i}`));
 export const personOf=e=>S&&S.people?S.people.find(p=>p.email===e):null;
 /** Display name for a person key (e-mail), an unassigned role or an unassigned cost-centre band. */
@@ -74,7 +63,7 @@ export const DOCS={
  tco:['TCO / DCF kalkuláció (7. melléklet)',7,'xlsx'],matrix:['Kiértékelési mátrix (2. melléklet)',7,'xlsx'],
  nego:['Tárgyalási jegyzőkönyv',8,'docx'],revised:['Módosított, írásos ajánlat',8,'pdf'],
  ssd:['Supplier Selection Document (SSD)',9,'docx'],ifsCert:['IFS-megfelelőségi tanúsítványok',9,'pdf'],
- contractFinal:['Szerződés / PO-dokumentum (végleges)',10,'docx'],contractSigned:['Aláírt szerződés (Netlock / szkennelt)',10,'pdf'],bankGuar:['Bankgarancia',10,'pdf'],
+ contractFinal:['Szerződés / PO-dokumentum (végleges)',10,'docx'],contractSigned:['Aláírt szerződés (Netlock / szkennelt)',10,'pdf'],legalOp:['Jogi vélemény',10,'pdf'],finOp:['Pénzügyi vélemény',10,'pdf'],bankGuar:['Bankgarancia',10,'pdf'],
  po:['Purchase Order (PO)',11,'pdf'],perfCert:['Teljesítésigazolás (9. melléklet)',11,'pdf'],invoice:['Számla',11,'pdf'],vhProtocol:['Vészhelyzeti jegyzőkönyv (6. melléklet)',11,'docx']};
 export const FOLDERS=['Igény és specifikáció','BSD és tenderkiírás','Meghívások','Beérkezett ajánlatok','Bontási jegyzőkönyv','Műszaki értékelés','Kereskedelmi értékelés és TCO','Tárgyalási dokumentumok','SSD és jóváhagyások','Szerződés és módosítások','PO, teljesítésigazolás és lezárás'];
 export const dl=k=>DOCS[k][0];
@@ -101,18 +90,18 @@ export const nextStage=p=>{let n=p.stage+1;while(skipped(p).includes(n)&&n<6)n++
 export const tcoReq=p=>p.cat==='CAPEX'&&!p.maint;
 
 /* ===== Approvals ===== */
-export const ATITLE={igeny:'Beszerzési igény',tender:'Tenderkiírás',ssd:'Beszállító-kiválasztás (SSD)',ss:'Sole Source indoklás',vh:'Vészhelyzeti beszerzés',jogi:'Jogi vélemény',penz:'Pénzügyi vélemény',sign:'Szerződés cégszerű aláírása',bgWaive:'Eltérés a bankgaranciától'};
-export const ADESC={igeny:'Költséghely szerinti jóváhagyás (8.1 mátrix)',tender:'Tenderindítási jóváhagyás – CEO + CFO együtt',ssd:'SSD ügyvezetői jóváhagyása',ss:'Versenyeztetés alóli felmentés jóváhagyása',vh:'Vészhelyzeti beszerzés jóváhagyása',jogi:'Jogi véleményezés (5 munkanap)',penz:'Pénzügyi véleményezés (5 munkanap)',sign:'Aláírás jóváhagyása – CEO + CFO együtt',bgWaive:'Kizárólag CFO engedélyezheti'};
+export const ATITLE={igeny:'Beszerzési igény',tender:'Tenderkiírás',ssd:'Beszállító-kiválasztás (SSD)',ss:'Sole Source indoklás',vh:'Vészhelyzeti beszerzés',sign:'Szerződés cégszerű aláírása',bgWaive:'Eltérés a bankgaranciától'};
+export const ADESC={igeny:'Költséghely szerinti jóváhagyás (8.1 mátrix)',tender:'Tenderindítási jóváhagyás – CEO + CFO együtt',ssd:'SSD ügyvezetői jóváhagyása',ss:'Versenyeztetés alóli felmentés jóváhagyása',vh:'Vészhelyzeti beszerzés jóváhagyása',sign:'Aláírás jóváhagyása – CEO + CFO együtt',bgWaive:'Kizárólag CFO engedélyezheti'};
 export function required(p,k){
   const t=typeOf(p.value);
   if(k==='igeny'){const a=ccApprover(p.cc,p.value);const r=a?[a]:[];if(t==='Kiemelt'&&!r.includes(SCM))r.push(SCM);return r;}
   if(k==='tender'||k==='sign')return [CEO,CFO];
   if(k==='ssd'||k==='ss')return t==='Kiemelt'?[CEO,CFO]:[ccApprover(p.cc,p.value)||SCM];
   if(k==='vh')return p.value>=2e6?[CEO]:[ccApprover(p.cc,p.value)||SCM];
-  if(k==='jogi')return [JOGI];if(k==='penz')return [PENZ];if(k==='bgWaive')return [CFO];
+  if(k==='bgWaive')return [CFO];
   return [];
 }
-export const BOUND={igeny:'spec',ssd:'ssd',ss:'ssForm',vh:'vhReason',jogi:'contractFinal',penz:'contractFinal',sign:'contractFinal'};
+export const BOUND={igeny:'spec',ssd:'ssd',ss:'ssForm',vh:'vhReason',sign:'contractFinal'};
 export const boundKey=(p,k)=>k==='tender'?(typeOf(p.value)==='Kiemelt'?'bsd':'rfq'):(BOUND[k]||null);
 export function apprState(p,key){
   const req=required(p,key),a=p.appr[key],bk=boundKey(p,key),bd=bk?docLatest(p,bk):null,ver=bd?bd.ver:1;
@@ -186,9 +175,9 @@ export function checklist(p){
   if(s===3&&p.proc==='Tender'){
     const ta=apprState(p,'tender'),n=p.bidders.length,rc=p.bidders.filter(b=>b.status!=='meghívva').length;
     push({id:'send',label:'Ajánlatkérés kiküldése (arajanlat@fonteviva.hu) és rögzítése',short:'Ajánlatkérés kiküldése',who:p.owner,done:!!p.f.sent,ev:p.f.sent?`${nm(p.f.sent.by)} · ${fdt(p.f.sent.ts)} · ${n} címzett · határidő: ${fDay(p.bidDeadline)}`:'',blocked:!p.f.sent&&ta.status!=='approved'?'A kiküldéshez CEO + CFO jóváhagyás szükséges':null,acts:p.f.sent?[]:[{a:'send',l:'Kiküldés rögzítése',p:true}]});
-    push({id:'resp',label:`Ajánlatok / lemondó nyilatkozatok beérkezése (${rc}/${n})`,short:'Ajánlattételi határidő',who:ADM,due:p.bidDeadline,done:!!p.f.sent&&(allResp(p)||(p.bidDeadline&&S.today>=p.bidDeadline)||!!p.f.opened),ev:p.f.sent?'Ajánlattételi határidő: '+fDay(p.bidDeadline):'',acts:[{a:'tab',k:'bids',l:'Ajánlatok'}]});
+    push({id:'resp',label:`Ajánlatok / lemondó nyilatkozatok beérkezése (${rc}/${n})`,short:'Ajánlattételi határidő',who:p.owner,due:p.bidDeadline,done:!!p.f.sent&&(allResp(p)||(p.bidDeadline&&S.today>=p.bidDeadline)||!!p.f.opened),ev:p.f.sent?'Ajánlattételi határidő: '+fDay(p.bidDeadline):'',acts:[{a:'tab',k:'bids',l:'Ajánlatok'}]});
     const early=p.bidDeadline&&S.today<p.bidDeadline&&!allResp(p);
-    push({id:'open',label:'Ajánlatbontás és bontási jegyzőkönyv',short:'Ajánlatbontás',who:ADM,due:p.bidDeadline,done:!!p.f.opened,ev:p.f.opened?`${nm(p.f.opened.by)} · ${fdt(p.f.opened.ts)}`:'',blocked:!p.f.opened&&(!p.f.sent?'Előbb küldje ki a tendert':(early?`A határidő (${fDay(p.bidDeadline)}) előtt nem bontható`:null)),acts:p.f.opened?[]:[{a:'open',l:'Ajánlatbontás',p:true}]});
+    push({id:'open',label:'Ajánlatbontás és bontási jegyzőkönyv',short:'Ajánlatbontás',who:p.owner,due:p.bidDeadline,done:!!p.f.opened,ev:p.f.opened?`${nm(p.f.opened.by)} · ${fdt(p.f.opened.ts)}`:'',blocked:!p.f.opened&&(!p.f.sent?'Előbb küldje ki a tendert':(early?`A határidő (${fDay(p.bidDeadline)}) előtt nem bontható`:null)),acts:p.f.opened?[]:[{a:'open',l:'Ajánlatbontás',p:true}]});
     if(p.f.opened){
       const v=validBids(p).length;
       if(v<=1)push({id:'single',label:v===0?'Nincs érvényes ajánlat: sikertelen tender vagy újratendereztetés':'Egyetlen érvényes ajánlat: SS-átsorolás vagy újratendereztetés (ÉB / SCM vezető dönt)',short:'Egyetlen érvényes ajánlat – döntés',who:SCM,done:!!p.f.singleResolved,ev:p.f.singleResolved?p.f.singleResolved.note:'',acts:p.f.singleResolved?[]:[{a:'resolve1',l:'Döntés',p:true}]});
@@ -198,7 +187,7 @@ export function checklist(p){
       fI('commDone','Kereskedelmi értékelés lezárása (ár, fizetési feltétel, szállítási idő, jótállás)',p.owner,{short:'Kereskedelmi értékelés lezárása',due:p.due[3],blocked:!p.f.commDone&&!ready?'Műszaki pontszámok és kereskedelmi adatok szükségesek minden műszakilag megfelelő ajánlathoz':null,acts:p.f.commDone?[]:[{a:'commClose',l:'Lezárás',p:true}]});
       if(tcoReq(p))dI('tco','TCO / DCF kalkuláció (CAPEX esetén kötelező)',p.owner,{acts:[{a:'tco',l:docLatest(p,'tco')?'Újraszámolás':'TCO számoló',p:!docLatest(p,'tco')},{a:'doc',k:'tco',l:'Feltöltés'}]});
       push({id:'matrix',label:'Egységes kiértékelési mátrix (2. melléklet)',who:p.owner,done:!!docLatest(p,'matrix'),ev:docLatest(p,'matrix')?`${docLatest(p,'matrix').name} · v${docLatest(p,'matrix').ver}`:'',blocked:!docLatest(p,'matrix')&&!p.f.commDone?'A kereskedelmi értékelés lezárása után generálható':null,acts:[{a:'genMatrix',l:docLatest(p,'matrix')?'Újragenerálás':'Generálás',p:!docLatest(p,'matrix')}]});
-      if(t==='Kiemelt')fI('ndaSigned','Titoktartási és összeférhetetlenségi nyilatkozatok (adminisztrátor, ÉB-tagok)',ADM);
+      if(t==='Kiemelt')fI('ndaSigned','Titoktartási és összeférhetetlenségi nyilatkozatok (ÉB-tagok)',p.owner);
     }
   }
   if(s===4){
@@ -214,9 +203,9 @@ export function checklist(p){
   if(s===5){
     push({id:'ctype',label:'Szerződéstípus kiválasztása (PO / ICO / FCO / előrevásárlás / csatlakozási)',who:p.owner,done:!!p.contractType,ev:p.contractType||'',acts:p.contractType?[]:[{a:'ctype',l:'Kiválasztás',p:true}]});
     dI('contractFinal','Szerződés / PO-dokumentum végleges tervezete',p.owner);
-    if(t==='Kiemelt'){aI('jogi','Jogi véleményezés (20 M Ft felett, 5 munkanap)');aI('penz','Pénzügyi véleményezés (20 M Ft felett, 5 munkanap)');}
-    if(p.prepay){const bg=!!docLatest(p,'bankGuar'),w=apprState(p,'bgWaive');push({id:'bg',label:'Előleg esetén: bankgarancia csatolva vagy CFO írásos eltérés-engedély',who:PENZ+' + '+CFO,done:bg||w.status==='approved',appr:w.requested?w:null,ev:bg?'Bankgarancia csatolva':'',acts:bg?[]:[{a:'doc',k:'bankGuar',l:'Bankgarancia',p:true}].concat(w.requested?[]:[{a:'apprReq',k:'bgWaive',l:'CFO eltérés kérése'}])});}
-    const sg=apprState(p,'sign'),pre=(t!=='Kiemelt'||(apprState(p,'jogi').status==='approved'&&apprState(p,'penz').status==='approved'));
+    if(t==='Kiemelt'){dI('legalOp','Jogi vélemény a szerződéstervezetről (20 M Ft felett, 5 munkanapon belül)',p.owner);dI('finOp','Pénzügyi vélemény a szerződéstervezetről (20 M Ft felett, 5 munkanapon belül)',p.owner);}
+    if(p.prepay){const bg=!!docLatest(p,'bankGuar'),w=apprState(p,'bgWaive');push({id:'bg',label:'Előleg esetén: bankgarancia csatolva vagy CFO írásos eltérés-engedély',who:p.owner+' + '+CFO,done:bg||w.status==='approved',appr:w.requested?w:null,ev:bg?'Bankgarancia csatolva':'',acts:bg?[]:[{a:'doc',k:'bankGuar',l:'Bankgarancia',p:true}].concat(w.requested?[]:[{a:'apprReq',k:'bgWaive',l:'CFO eltérés kérése'}])});}
+    const sg=apprState(p,'sign'),pre=(t!=='Kiemelt'||(!!docLatest(p,'legalOp')&&!!docLatest(p,'finOp')));
     aI('sign','Cégszerű aláírás jóváhagyása (CEO + CFO együttesen)',{blocked:!sg.requested&&!docLatest(p,'contractFinal')?'Előbb töltse fel a szerződés végleges tervezetét':(!sg.requested&&!pre?'A jogi és pénzügyi vélemény szükséges':null)});
     dI('contractSigned','Aláírt példány (Netlock e-aláírás vagy papír + szkennelt másolat)',p.owner,{blocked:!docLatest(p,'contractSigned')&&sg.status!=='approved'?'Az aláírás-jóváhagyás után tölthető fel':null});
   }
@@ -224,15 +213,15 @@ export function checklist(p){
     if(VH){const due=addWD(p.vhDate,5);
       dI('vhProtocol','Vészhelyzeti jegyzőkönyv (6. melléklet)',p.owner,{short:'Vészhelyzeti dokumentáció lezárása',due});dI('ssForm',dl('ssForm'),p.owner,{due});
       push({id:'quote',label:'Beérkezett ajánlat(ok) rögzítve',who:p.owner,due,done:p.docs.some(d=>d.key==='bid'),acts:[{a:'tab',k:'bids',l:'Ajánlatok'}]});
-      dI('po','Visszamenőleges PO (dokumentált indoklással)',p.owner,{due});dI('perfCert',dl('perfCert'),p.requester);dI('invoice','Számla és adategyezőség (Pénzügy)',PENZ);
+      dI('po','Visszamenőleges PO (dokumentált indoklással)',p.owner,{due});dI('perfCert',dl('perfCert'),p.requester);dI('invoice','Számla és adategyezőség',p.owner);
     }else{
       fI('mdm','Törzsadatok: beszállítói törzs, cikkszám, fizetési feltételek (BC)',MDM);
       if(['ICO','FCO','Előrevásárlás'].some(x=>(p.contractType||'').startsWith(x)))push({id:'bc',label:'Szerződés rögzítése BC-ben (összeg, érvényesség, dokumentumok)',who:p.owner,done:!!p.f.bc,ev:p.f.bc?`BC: ${p.f.bc.note} · ${nm(p.f.bc.by)}`:'',acts:p.f.bc?[]:[{a:'input',k:'bc',l:'Rögzítés',p:true}]});
       push({id:'po',label:'PO kibocsátása (minden beszerzés PO-val kezdődik)',short:'PO kibocsátása',who:p.owner,done:!!p.f.po,ev:p.f.po?`PO: ${p.f.po.note} · ${nm(p.f.po.by)}`:'',blocked:!p.f.po&&!p.f.mdm?'Előbb a törzsadatok ellenőrzése szükséges':null,acts:p.f.po?[]:[{a:'input',k:'po',l:'PO rögzítése',p:true}]});
-      fI('goods','Mennyiségi átvétel (Raktár)',RAKT);
+      fI('goods','Mennyiségi átvétel',p.requester);
       if(p.ifs)fI('qc','Minőségi átvétel: COA / DoC, karantén és dokumentált felszabadítás',MI);
       dI('perfCert',dl('perfCert'),p.requester);
-      fI('invoice','Számla adategyezőség ellenőrzése a szerződéssel / PO-val (Pénzügy)',PENZ,{blocked:!p.f.invoice&&!docLatest(p,'perfCert')?'Számla csak igazolt teljesítés után fizethető':null});
+      fI('invoice','Számla adategyezőség ellenőrzése a szerződéssel / PO-val',p.owner,{blocked:!p.f.invoice&&!docLatest(p,'perfCert')?'Számla csak igazolt teljesítés után fizethető':null});
     }
   }
   return L;

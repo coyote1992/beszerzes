@@ -178,7 +178,7 @@ function OpenBids({ pid }: { pid: string }) {
   const initial: V = {}
   rec.forEach((b: any) => { initial['f_' + b.id] = !b.late; initial['p_' + b.id] = b.price || ''; initial['d_' + b.id] = b.pay || ''; initial['l_' + b.id] = b.lead || ''; initial['w_' + b.id] = b.warr || '' })
   return <FormDialog wide kicker="PROC3 · Ajánlatbontás" title="Ajánlatbontás és bontási jegyzőkönyv" ok="Bontás lezárása, jegyzőkönyv" initial={initial}
-    before={<Note tone="warn"><LockIcon className="mr-1.5 inline size-4" />A bontás a határidő után, az adminisztrátor jelenlétében történik. A rögzített árak a kiértékelés lezárásáig bizalmasak.</Note>}
+    before={<Note tone="warn"><LockIcon className="mr-1.5 inline size-4" />A bontás a határidő után történik. A rögzített árak a kiértékelés lezárásáig bizalmasak.</Note>}
     body={(v, set) => rec.length ? (
       <div className="overflow-x-auto rounded-lg bg-muted/50"><table className="w-full text-sm"><thead><tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">{['Ajánlattevő', 'Formai', 'Ár (nettó Ft)', 'Fizetés (nap)', 'Szállítás (hét)', 'Jótállás (hó)'].map((h) => <th key={h} className="px-3 py-2.5">{h}</th>)}</tr></thead>
         <tbody>{rec.map((b: any) => <tr key={b.id} className="border-t border-border"><td className="px-3 py-2"><b>{b.name}</b><div className="text-xs text-muted-foreground">{b.recv}{b.late && ' · KÉSVE'}</div></td>
@@ -243,16 +243,15 @@ const ccUses = (k: string) => Object.values<any>(S.cc || {}).reduce((n, c) => n 
 function RoleDialog({ k }: { k?: string }) {
   const cur = k ? (S.roleDefs || []).find((r: any) => r.key === k) : null
   return <FormDialog kicker="Beállítások" title={cur ? 'Szerepkör szerkesztése' : 'Új szerepkör'} ok={cur ? 'Mentés' : 'Létrehozás'}
-    initial={{ label: cur?.label || '', desc: cur?.desc || '', person: k ? S.roles[k] || '' : '' }}
-    before={<Note>A saját szerepkört személyhez rendelheted, és a költséghely-sávoknál jóváhagyóként választhatod (pl. „Karbantartási vezető – Somogyvár”, „Értékelő Bizottság elnöke”).</Note>}
-    fields={[{ name: 'label', full: true, label: 'Megnevezés' }, { name: 'desc', full: true, label: 'Feladata (opcionális)', kind: 'textarea', rows: 2 }, { name: 'person', full: true, label: 'Személy', kind: 'select', opts: peopleOpts('– nincs kijelölve –') }]}
+    initial={{ label: cur?.label || '', person: k ? S.roles[k] || '' : '' }}
+    fields={[{ name: 'label', full: true, label: 'Megnevezés', ph: 'pl. Karbantartási vezető – Somogyvár' }, { name: 'person', full: true, label: 'Személy', kind: 'select', opts: peopleOpts('– nincs kijelölve –') }]}
     after={() => cur ? <button type="button" className="self-start text-sm text-destructive hover:underline" onClick={() => openDlg({ type: 'roledel', key: k })}>Szerepkör törlése…</button> : null}
     onSubmit={(v) => {
       const label = String(v.label || '').trim()
       if (!label) return 'Adj meg megnevezést.'
       if (Object.entries<string>(ROLE_LABEL).some(([key, l]) => key !== k && l.toLowerCase() === label.toLowerCase())) return 'Ilyen nevű szerepkör már van.'
       const key = k || 'R' + Date.now().toString(36).toUpperCase()
-      const def = { key, label, desc: String(v.desc || '').trim() }
+      const def = { key, label }
       S.roleDefs = cur ? S.roleDefs.map((r: any) => (r.key === key ? def : r)) : [...(S.roleDefs || []), def]
       S.roles = { ...S.roles }; if (v.person) S.roles[key] = v.person; else delete S.roles[key]
       applyRoles()
