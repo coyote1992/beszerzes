@@ -6,15 +6,14 @@ export declare const addDoc: any
 export declare const addTask: any
 export declare const advance: any
 export declare const asc: any
-export declare const clockNext: any
 export declare const closeProc: any
 export declare const commClose: any
 export declare const createProc: any
 export declare const csvExport: any
 export declare const decideApproval: any
 export declare const declineBid: any
+export declare const docPath: any
 export declare const docs: any
-export declare const ensureState: any
 export declare const evalBid: any
 export declare const failProc: any
 export declare const genMatrix: any
@@ -27,9 +26,8 @@ export declare const procLabel: any
 export declare const recvBid: any
 export declare const removeBidder: any
 export declare const requestApproval: any
-export declare const resetDemo: any
 export declare const resolveSingle: any
-export declare const sample: any
+export declare const safeName: any
 export declare const save: any
 export declare const saveNego: any
 export declare const savePrequal: any
@@ -39,6 +37,7 @@ export declare const setCtype: any
 export declare const setFlag: any
 export declare const setInput: any
 export declare const ssdHTML: any
+export declare const subfolderName: any
 export declare const tcoCalc: any
 export declare const toggleTask: any
 export declare const uploadDoc: any

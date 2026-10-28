@@ -17,20 +17,20 @@ const buttonVariants = cva(
     variants: {
       size: {
         default:
-          "h-10 gap-1.5 px-3 has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5",
-        icon: "size-10",
-        "icon-lg": "size-11",
+          "h-9 gap-1.5 px-3 has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5",
+        icon: "size-9",
+        "icon-lg": "size-10",
         "icon-sm":
-          "size-9 in-data-[slot=button-group]:rounded-lg rounded-[min(var(--radius-md),12px)]",
+          "size-8 in-data-[slot=button-group]:rounded-lg rounded-[min(var(--radius-md),12px)]",
         "icon-xs":
-          "size-8 in-data-[slot=button-group]:rounded-lg rounded-[min(var(--radius-md),10px)] [&_svg:not([class*='size-'])]:size-3",
+          "size-7 in-data-[slot=button-group]:rounded-lg rounded-[min(var(--radius-md),10px)] [&_svg:not([class*='size-'])]:size-3",
         input:
           "h-[var(--field-height)] gap-2 rounded-[var(--field-radius)] px-[var(--field-padding-x)] py-[var(--field-padding-y)]",
         "input-sm":
           "h-[var(--field-height-sm)] gap-2 rounded-[var(--field-radius)] px-[var(--field-padding-x)] py-[var(--field-padding-y)]",
-        lg: "h-11 gap-1.5 px-4 has-data-[icon=inline-end]:pr-3.5 has-data-[icon=inline-start]:pl-3.5",
-        sm: "h-9 gap-1 in-data-[slot=button-group]:rounded-lg rounded-[min(var(--radius-md),12px)] px-3 text-[0.8rem] has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3.5",
-        xs: "h-8 gap-1 in-data-[slot=button-group]:rounded-lg rounded-[min(var(--radius-md),10px)] px-2.5 text-xs has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3",
+        lg: "h-10 gap-1.5 px-4 has-data-[icon=inline-end]:pr-3.5 has-data-[icon=inline-start]:pl-3.5",
+        sm: "h-8 gap-1 in-data-[slot=button-group]:rounded-lg rounded-[min(var(--radius-md),12px)] px-3 text-[0.8rem] has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3.5",
+        xs: "h-7 gap-1 in-data-[slot=button-group]:rounded-lg rounded-[min(var(--radius-md),10px)] px-2.5 text-xs has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3",
       },
       variant: {
         default:
@@ -42,7 +42,7 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-muted hover:text-foreground active:bg-muted/80 aria-expanded:bg-muted aria-pressed:bg-muted/80 dark:aria-pressed:bg-muted/60 dark:active:bg-muted/60 dark:hover:bg-muted/50",
         input:
-          "border-input bg-card font-normal font-sans text-base text-foreground leading-snug shadow-input hover:border-input-hover focus-visible:ring-2 focus-visible:ring-ring/15 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:border-input-hover/80 aria-pressed:border-input-hover aria-invalid:border-destructive-foreground data-[placeholder]:text-placeholder-foreground",
+          "border-input bg-card font-normal font-sans text-sm text-foreground leading-snug shadow-input hover:border-input-hover focus-visible:ring-2 focus-visible:ring-ring/15 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:border-input-hover/80 aria-pressed:border-input-hover aria-invalid:border-destructive-foreground data-[placeholder]:text-placeholder-foreground",
         link: "text-primary underline-offset-4 hover:underline active:opacity-80 aria-pressed:underline aria-pressed:opacity-80",
         outline:
           "border-border bg-background hover:bg-muted hover:text-foreground active:bg-muted/80 aria-expanded:bg-muted aria-pressed:bg-muted/80 dark:border-input dark:bg-input/30 dark:aria-pressed:bg-input/60 dark:active:bg-input/60 dark:hover:bg-input/50",

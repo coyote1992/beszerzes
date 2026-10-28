@@ -1,11 +1,12 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "@fontsource-variable/outfit";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+    --font-sans: "Outfit Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     --font-display: var(--font-sans);
     --color-s1: var(--s1);
     --color-s1-soft: var(--s1-soft);
@@ -25,11 +26,11 @@
     --color-s6: var(--s6);
     --color-s6-soft: var(--s6-soft);
     --color-s6-ink: var(--s6-ink);
-    --field-height: 48px;
-    --field-height-sm: 40px;
-    --field-padding-x: 1rem;
-    --field-padding-y: 12px;
-    --field-radius: var(--radius-2xl);
+    --field-height: 36px;
+    --field-height-sm: 32px;
+    --field-padding-x: 0.75rem;
+    --field-padding-y: 6px;
+    --field-radius: var(--radius-md);
     --radius-2xl: calc(var(--radius) + 8px);
     --radius-3xl: calc(var(--radius) + 12px);
     --radius-4xl: calc(var(--radius) + 16px);
@@ -43,7 +44,7 @@
     --shadow-sm: 0 0 0 1px rgba(51, 51, 51, 0.04), 0 16px 8px -8px rgba(51, 51, 51, 0.01), 0 12px 6px -6px rgba(51, 51, 51, 0.02), 0 5px 5px -2.5px rgba(51, 51, 51, 0.08), 0 1px 3px -1.5px rgba(51, 51, 51, 0.16), inset 0 -0.5px 0.5px rgba(51, 51, 51, 0.08);
     --shadow-soft: 0 15px 50px 0 rgba(27, 32, 50, 0.1);
     --shadow-xs: 0 0 0 1px rgba(51, 51, 51, 0.04), 0 4px 8px -2px rgba(51, 51, 51, 0.06), 0 2px 4px rgba(51, 51, 51, 0.04), 0 1px 2px rgba(51, 51, 51, 0.04), inset 0 -1px 1px -0.5px rgba(51, 51, 51, 0.06);
-    --textarea-min-height: 70px;
+    --textarea-min-height: 64px;
     --color-warning-foreground: var(--warning-foreground);
     --color-warning: var(--warning);
     --color-surface-foreground: var(--surface-foreground);
@@ -174,8 +175,8 @@ body { font-family: var(--font-sans); }
 .font-display { font-family: var(--font-display); letter-spacing: -0.01em; }
 button:not(:disabled), [role="button"], [role="tab"] { transition-property: transform, background-color, color, box-shadow, opacity; transition-duration: 160ms; transition-timing-function: var(--ease-out); }
 button:not(:disabled):active, [role="button"]:active { transform: scale(0.97); }
-@keyframes rise { from { opacity: 0; transform: translateY(10px) scale(0.985); } to { opacity: 1; transform: none; } }
-.rise { animation: rise 420ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 45ms); }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.rise { animation: rise 280ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 30ms); }
 @keyframes pop { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
 .pop { animation: pop 200ms var(--ease-out) both; }
 /* semi-transparent shadow instead of hard border (Kowalski) */
@@ -184,7 +185,8 @@ button:not(:disabled):active, [role="button"]:active { transform: scale(0.97); }
 .lift-hover { transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out); }
 @media (hover: hover) and (pointer: fine) { .lift-hover:hover { box-shadow: 0 0 0 1px var(--ring), 0 1px 2px oklch(0 0 0 / 0.06); } }
 .scrollbar-thin { scrollbar-width: thin; scrollbar-color: oklch(0.27 0.07 315 / 0.25) transparent; }
-.prose-doc h4 { font-family: var(--font-display); font-weight: 700; margin: 1rem 0 .25rem; }
+.prose-doc h4 { font-weight: 600; margin: .9rem 0 .25rem; }
+.prose-doc h4:first-child { margin-top: 0; }
 .prose-doc table { width: 100%; border-collapse: collapse; margin: .5rem 0; font-size: .85rem; }
 .prose-doc th, .prose-doc td { border-bottom: 1px solid var(--border); padding: .45rem .5rem; text-align: left; }
 .prose-doc th { color: var(--muted-foreground); font-weight: 600; font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; }

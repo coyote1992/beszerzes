@@ -147,7 +147,7 @@ const SelectLabel = ({ className, ...props }: SelectPrimitive.GroupLabel.Props) 
 const SelectItem = ({ className, children, ...props }: SelectPrimitive.Item.Props) => (
   <SelectPrimitive.Item
     className={cn(
-      "relative flex w-full cursor-default select-none items-center rounded-lg py-1.5 pr-8 pl-2 font-sans text-base leading-snug outline-hidden focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+      "relative flex w-full cursor-default select-none items-center rounded-lg py-1.5 pr-8 pl-2 font-sans text-sm leading-snug outline-hidden focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
       className,
     )}
     data-slot="select-item"

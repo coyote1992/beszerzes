@@ -1,16 +1,20 @@
 // @ts-nocheck
 /* State-changing commands. Each returns an error string on failure, otherwise undefined. */
 import {
-  S, setS, P, log, stamp, save, uid, nextId, load, SKEY, seedState,
+  S, P, log, stamp, save, uid, nextId, nm,
   addWD, addD, fDay, ft, typeOf, docLatest, docs, boundKey, apprState, checklist, nextStage, ranking,
-  validBids, tcoReq, W, STAGES, ATITLE, dl, DOCS, SCM, decide,
+  validBids, tcoReq, W, STAGES, ATITLE, dl, DOCS, FOLDERS, SCM, decide,
 } from './engine.js'
 import { notify } from './notify.js'
 
 const toast = notify
 export const num = (v) => Number(String(v ?? '').replace(/[\s ]/g, '').replace(',', '.'))
 export const asc = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '')
-export const sample = (p, key, ver) => `${asc(dl(key)).slice(0, 30)}_${asc(p.id)}_v${ver}.${DOCS[key][2]}`
+/** SharePoint-safe name (keeps accents). */
+export const safeName = (s, max = 80) => String(s).replace(/[\\/:*?"<>|#%\u0000-\u001f]/g, '-').replace(/\s+/g, ' ').replace(/^[\s.]+|[\s.]+$/g, '').slice(0, max)
+export const subfolderName = (n) => `${String(n).padStart(2, '0')} – ${FOLDERS[n - 1]}`
+/** Folder in the Dokumentumok library for a document type of a procurement. */
+export const docPath = (p, key) => (p.folder ? `${p.folder}/${subfolderName(DOCS[key][1])}` : '')
 const F0 = (note) => ({ by: S.user, ts: stamp(), note: note || '' })
 export const procLabel = (x) => (x === 'SS' ? 'Sole Source' : x)
 
@@ -43,31 +47,35 @@ export function ssdHTML(p) {
 export function addDoc(p, o) {
   const prev = docLatest(p, o.key, o.bid), ver = (prev ? prev.ver : 0) + 1
   const inv = prev ? Object.keys(p.appr).filter((k) => boundKey(p, k) === o.key && p.appr[k].decisions.some((d) => d.ver === prev.ver)) : []
-  const d = { id: 'd' + ++S.dn, key: o.key, ver, name: o.name, size: o.size || Math.round(60 + Math.random() * 700) * 1024, by: S.user, ts: stamp(), bid: o.bid, note: o.note || '', content: o.content || '' }
+  const d = { id: uid(), key: o.key, ver, name: o.name, size: o.size || 0, url: o.url || '', path: docPath(p, o.key), by: S.user, ts: stamp(), bid: o.bid, note: o.note || '', content: o.content || '' }
   p.docs.push(d)
   log(p.id, 'Dokumentum', (o.title || dl(o.key)) + (ver > 1 ? ' – új verzió' : ' feltöltve'), `${d.name} · v${ver}`)
   inv.forEach((k) => log(p.id, 'Jóváhagyás', 'Korábbi jóváhagyások érvénytelenek', `${ATITLE[k]} · új dokumentumverzió (v${ver}) – a döntéseket meg kell ismételni`))
   return d
 }
+/** Registers a file that has already been uploaded to SharePoint. */
 export function uploadDoc(pid, { key, bid, file, note }) {
-  const p = P(pid), prev = docLatest(p, key, bid)
-  addDoc(p, { key, bid, name: file ? file.name : sample(p, key, (prev ? prev.ver : 0) + 1), size: file ? file.size : 0, note })
-  toast('Dokumentum rögzítve', 'ok')
+  const p = P(pid)
+  addDoc(p, { key, bid, name: file.name, url: file.webUrl, size: file.size, note })
+  toast('Dokumentum feltöltve a SharePointba', 'ok')
 }
-export function genMatrix(pid) { const p = P(pid); addDoc(p, { key: 'matrix', name: 'Kiertekelesi_matrix_' + asc(p.id) + '.xlsx', content: matrixHTML(p) }); toast('Kiértékelési mátrix elkészült', 'ok') }
-export function genSSD(pid) { const p = P(pid); const d = addDoc(p, { key: 'ssd', name: 'SSD-' + asc(p.id) + '_tervezet.docx', content: ssdHTML(p) }); toast('SSD v' + d.ver + ' elkészült', 'ok') }
+export function genMatrix(pid) { const p = P(pid); addDoc(p, { key: 'matrix', name: 'Kiertekelesi_matrix_' + asc(p.id), content: matrixHTML(p) }); toast('Kiértékelési mátrix elkészült', 'ok') }
+export function genSSD(pid) { const p = P(pid); const d = addDoc(p, { key: 'ssd', name: 'SSD_' + asc(p.id) + '_tervezet', content: ssdHTML(p) }); toast('SSD v' + d.ver + ' elkészült', 'ok') }
 
 /* ---------- procurement lifecycle ---------- */
 export function createProc(v) {
   const val = num(v.value)
   if (!v.subject.trim()) return 'Adja meg a beszerzés tárgyát.'
   if (!(val > 0)) return 'Adja meg a becsült nettó értéket.'
+  if (!v.requester) return 'Válassza ki az igénylőt.'
   if (v.proc === 'Vészhelyzeti' && !v.reason.trim()) return 'Vészhelyzeti eljárásnál az indoklás kötelező.'
   const t = typeOf(val), prefix = v.proc === 'SS' ? 'SS' : v.proc === 'Vészhelyzeti' ? 'VH' : t === 'Kiemelt' ? 'BSD' : t === 'Egyszerű' ? 'BR' : 'EG'
-  const p = { id: nextId(prefix), subject: v.subject.trim(), org: v.org, cc: v.cc, value: val, cat: v.cat, proc: v.proc, ifs: !!v.ifs, maint: v.cat === 'CAPEX' && !!v.maint, it: !!v.it, prepay: !!v.prepay, requester: v.requester, owner: SCM, stage: 1, created: S.today, desired: v.desired, due: { 1: addWD(S.today, 5) }, docs: [], bidders: [], appr: {}, f: {}, mail: [], round: 1, closed: null, nego: null, bidDeadline: null, contractType: null, reclass: false, vhDate: v.proc === 'Vészhelyzeti' ? S.today : null }
+  const id = nextId(prefix, !!v.test)
+  const folder = `${v.test ? 'Teszt beszerzések' : 'Beszerzések'}/${safeName(id.replace(/\//g, '-') + ' ' + v.subject.trim(), 100)}`
+  const p = { id, test: !!v.test, subject: v.subject.trim(), org: v.org, cc: v.cc, value: val, cat: v.cat, proc: v.proc, ifs: !!v.ifs, maint: v.cat === 'CAPEX' && !!v.maint, it: !!v.it, prepay: !!v.prepay, requester: v.requester, owner: v.owner || SCM, createdBy: S.user, stage: 1, created: S.today, desired: v.desired, due: { 1: addWD(S.today, 5) }, folder, folderUrl: '', docs: [], bidders: [], appr: {}, f: {}, mail: [], round: 1, closed: null, nego: null, bidDeadline: null, contractType: null, reclass: false, vhDate: v.proc === 'Vészhelyzeti' ? S.today : null }
   S.procs.unshift(p)
-  log(p.id, 'Létrehozás', v.proc === 'Vészhelyzeti' ? 'Vészhelyzeti beszerzés indítva' : 'Beszerzés létrehozva', `${p.subject} · ${p.cat} · ${ft(val)} · besorolás: ${t}`)
-  if (v.proc === 'Vészhelyzeti') addDoc(p, { key: 'vhReason', name: 'Veszhelyzeti_indoklas.txt', note: v.reason })
+  log(p.id, 'Létrehozás', v.proc === 'Vészhelyzeti' ? 'Vészhelyzeti beszerzés indítva' : 'Beszerzés létrehozva', `${p.subject} · ${p.cat} · ${ft(val)} · besorolás: ${t}${p.test ? ' · TESZT' : ''}`)
+  if (v.proc === 'Vészhelyzeti') addDoc(p, { key: 'vhReason', name: 'Veszhelyzeti_indoklas_' + asc(p.id), content: `<h4>Vészhelyzeti indoklás – ${esc(p.id)}</h4><p>${esc(v.reason).replace(/\n/g, '<br>')}</p><p>Rögzítette: ${esc(nm(S.user))}, ${p.created}</p>` })
   toast(`${p.id} létrehozva – besorolás: ${t}`, 'ok')
   return { id: p.id }
 }
@@ -111,9 +119,9 @@ export function resolveSingle(pid, r, n) {
 export function requestApproval(pid, k) {
   const p = P(pid), a = apprState(p, k)
   if (a.bound && !a.doc) return 'Előbb töltse fel: ' + dl(a.bound)
-  p.appr[k] = { req: { by: S.user, ts: stamp() }, decisions: [] }
-  log(p.id, 'Jóváhagyás', 'Jóváhagyás elindítva', `${ATITLE[k]} · ${a.required.join(' + ')}${a.doc ? ' · ' + dl(a.bound) + ' v' + a.ver : ''}`)
-  toast('Jóváhagyás elindítva: ' + a.required.join(' + '), 'ok')
+  p.appr[k] = { id: uid(), req: { by: S.user, ts: stamp() }, decisions: [] }
+  log(p.id, 'Jóváhagyás', 'Jóváhagyás elindítva', `${ATITLE[k]} · ${a.required.map(nm).join(' + ')}${a.doc ? ' · ' + dl(a.bound) + ' v' + a.ver : ''}`)
+  toast('Jóváhagyás elindítva: ' + a.required.map(nm).join(' + '), 'ok')
 }
 export function decideApproval(pid, key, dec, comment) {
   const p = P(pid)
@@ -124,7 +132,7 @@ export function decideApproval(pid, key, dec, comment) {
 export function setFlag(pid, key, note) {
   const p = P(pid), i = checklist(p).find((x) => x.id === 'f-' + key)
   p.f[key] = F0(note)
-  log(p.id, 'Értékelés', 'Igazolás: ' + (i ? i.short || i.label : key), `${S.user}${note ? ' · ' + note : ''}`)
+  log(p.id, 'Értékelés', 'Igazolás: ' + (i ? i.short || i.label : key), `${nm(S.user)}${note ? ' · ' + note : ''}`)
 }
 export function setInput(pid, key, n) {
   if (!n.trim()) return 'Adja meg az azonosítót.'
@@ -160,21 +168,21 @@ export function removeBidder(pid, bid) {
 }
 export function recvBid(pid, bid, v) {
   const p = P(pid), b = p.bidders.find((x) => x.id === bid), vh = p.proc === 'Vészhelyzeti', late = p.bidDeadline && S.today > p.bidDeadline
+  if (!v.file) return 'Csatolja az ajánlat fájlját.'
   const prev = docLatest(p, 'bid', b.id), ver = (prev ? prev.ver : 0) + 1
   b.status = 'beérkezett'; b.recv = stamp(); b.sender = v.sender
-  b.msgId = `<${uid().slice(1)}@${v.sender.split('@')[1] || 'ajanlat.example'}>`
+  b.msgId = `<${uid().slice(1)}@${(v.sender || '').split('@')[1] || 'ajanlat'}>`
   b.late = !!late; b.formal = late ? false : vh ? true : null
   if (vh) b.price = num(v.price) || p.value
-  const fname = v.file ? v.file.name : asc(b.name) + '_ajanlat_v' + ver + '.pdf'
-  addDoc(p, { key: 'bid', bid: b.id, name: fname, size: v.file ? v.file.size : 0, note: v.note, title: 'Ajánlat beérkezett – ' + b.name })
-  p.mail.push({ dir: 'in', ts: b.recv, from: v.sender, to: 'arajanlat@fonteviva.hu', subj: 'Ajánlat – ' + p.subject + ' (' + p.id + ')', body: '', att: [fname], bid: b.id })
-  log(p.id, 'Ajánlat', 'Ajánlat beérkezett', `${b.name} · v${ver} · üzenetazonosító: ${b.msgId}${late ? ' · KÉSVE' : ''}`)
+  addDoc(p, { key: 'bid', bid: b.id, name: v.file.name, url: v.file.webUrl, size: v.file.size, note: v.note, title: 'Ajánlat beérkezett – ' + b.name })
+  p.mail.push({ dir: 'in', ts: b.recv, from: v.sender, to: 'arajanlat@fonteviva.hu', subj: 'Ajánlat – ' + p.subject + ' (' + p.id + ')', body: '', att: [v.file.name], bid: b.id })
+  log(p.id, 'Ajánlat', 'Ajánlat beérkezett', `${b.name} · v${ver}${late ? ' · KÉSVE' : ''}`)
   toast('Ajánlat rögzítve – tartalma zárolt a bontásig', 'ok')
 }
 export function declineBid(pid, bid, v) {
   const p = P(pid), b = p.bidders.find((x) => x.id === bid)
   b.status = 'lemondó'; b.recv = stamp(); b.note = v.note
-  addDoc(p, { key: 'bid', bid: b.id, name: v.file ? v.file.name : asc(b.name) + '_lemondo_nyilatkozat.pdf', note: v.note, title: 'Lemondó nyilatkozat – ' + b.name })
+  if (v.file) addDoc(p, { key: 'bid', bid: b.id, name: v.file.name, url: v.file.webUrl, size: v.file.size, note: v.note, title: 'Lemondó nyilatkozat – ' + b.name })
   log(p.id, 'Ajánlat', 'Lemondó nyilatkozat rögzítve', `${b.name}${v.note ? ' · ' + v.note : ''}`)
 }
 export function sendTender(pid, v) {
@@ -186,16 +194,16 @@ export function sendTender(pid, v) {
   p.bidDeadline = v.dl; p.due[3] = v.dl; p.bidders.forEach((b) => (b.invited = ts))
   p.f.sent = { by: S.user, ts, to: p.bidders.map((b) => b.name) }
   p.mail.push({ dir: 'out', ts, from: 'arajanlat@fonteviva.hu', to: p.bidders.map((b) => b.email).join(', '), subj: v.subj, body: v.body, att: pkg.map((d) => d.name) })
-  addDoc(p, { key: 'invit', name: 'Meghivo_' + asc(p.id) + '.eml', content: `<h4>${esc(v.subj)}</h4><p>${esc(v.body).replace(/\n/g, '<br>')}</p>`, title: 'Tender kiküldve' })
-  log(p.id, 'Levelezés', 'Tender kiküldve', `arajanlat@fonteviva.hu · ${p.bidders.length} címzett · határidő: ${fDay(v.dl)}`)
-  toast('Ajánlatkérés kiküldve', 'ok')
+  addDoc(p, { key: 'invit', name: 'Ajanlatkeres_' + asc(p.id), content: `<h4>${esc(v.subj)}</h4><p>${esc(v.body).replace(/\n/g, '<br>')}</p>`, title: 'Tender kiküldve' })
+  log(p.id, 'Levelezés', 'Ajánlatkérés kiküldve', `arajanlat@fonteviva.hu · ${p.bidders.length} címzett · határidő: ${fDay(v.dl)}`)
+  toast('Ajánlatkérés kiküldése rögzítve', 'ok')
 }
 export function openBids(pid, v) {
   const p = P(pid), rec = p.bidders.filter((b) => b.status === 'beérkezett')
   for (const b of rec) if (!b.late && v['f_' + b.id] && !(num(v['p_' + b.id]) > 0)) return 'Adja meg a(z) ' + b.name + ' árát.'
   rec.forEach((b) => { b.formal = b.late ? false : !!v['f_' + b.id]; b.price = num(v['p_' + b.id]) || null; b.pay = num(v['d_' + b.id]) || null; b.lead = num(v['l_' + b.id]) || null; b.warr = num(v['w_' + b.id]) || null })
   p.f.opened = F0()
-  addDoc(p, { key: 'opening', name: 'Bontasi_jegyzokonyv_' + asc(p.id) + '.docx', content: openingHTML(p) })
+  addDoc(p, { key: 'opening', name: 'Bontasi_jegyzokonyv_' + asc(p.id), content: openingHTML(p) })
   log(p.id, 'Ajánlat', 'Ajánlatbontás', `Bontási jegyzőkönyv · ${validBids(p).length} érvényes ajánlat, ${p.bidders.filter((b) => b.status === 'lemondó').length} lemondó nyilatkozat`)
   toast('Ajánlatbontás rögzítve – az árak láthatóvá váltak', 'ok')
 }
@@ -209,14 +217,14 @@ export function saveTco(pid, v) {
   const p = P(pid), x = { c0: num(v.c0), k: num(v.k), n: Math.max(1, Math.round(num(v.n))), r: num(v.r) / 100, res: num(v.res) }
   if (!(x.c0 > 0)) return 'Adja meg a kezdő költséget.'
   x.result = tcoCalc(x); p.tcoData = x
-  addDoc(p, { key: 'tco', name: 'TCO_kalkulacio_' + asc(p.id) + '.xlsx', content: `<h4>TCO / DCF – ${esc(p.id)}</h4>` + tbl(['Tétel', 'Érték'], [['Kezdő költség', ft(x.c0)], ['Éves üzemeltetési költség', ft(x.k)], ['Élettartam', x.n + ' év'], ['WACC', (x.r * 100).toFixed(1) + '%'], ['Maradványérték', ft(x.res)], ['<b>Diszkontált TCO</b>', '<b>' + ft(x.result) + '</b>']]) })
+  addDoc(p, { key: 'tco', name: 'TCO_kalkulacio_' + asc(p.id), content: `<h4>TCO / DCF – ${esc(p.id)}</h4>` + tbl(['Tétel', 'Érték'], [['Kezdő költség', ft(x.c0)], ['Éves üzemeltetési költség', ft(x.k)], ['Élettartam', x.n + ' év'], ['WACC', (x.r * 100).toFixed(1) + '%'], ['Maradványérték', ft(x.res)], ['<b>Diszkontált TCO</b>', '<b>' + ft(x.result) + '</b>']]) })
   toast('TCO rögzítve', 'ok')
 }
 export function saveNego(pid, v, cand) {
   const p = P(pid), b = cand.find((x) => x.id === v.winner), ini = num(v.initial), fin = num(v.final), reb = num(v.rebate) || 0
   if (!(ini > 0 && fin > 0)) return 'Adja meg a kezdő és végső árat.'
   p.nego = { winner: b.id, winnerName: b.name, initial: ini, final: fin, rebate: reb, saving: ini - fin + reb, isNew: !!b.isNew, note: v.note, ts: stamp(), by: S.user }
-  addDoc(p, { key: 'nego', name: 'Targyalasi_jegyzokonyv_' + asc(p.id) + '.docx', content: `<h4>Tárgyalási jegyzőkönyv</h4><p>Nyertes: ${esc(b.name)}<br>Kezdő ár: ${ft(ini)} → végső ár: ${ft(fin)}<br>Megtakarítás: <b>${ft(p.nego.saving)}</b></p><p>${esc(v.note)}</p>` })
+  addDoc(p, { key: 'nego', name: 'Targyalasi_jegyzokonyv_' + asc(p.id), content: `<h4>Tárgyalási jegyzőkönyv</h4><p>Nyertes: ${esc(b.name)}<br>Kezdő ár: ${ft(ini)} → végső ár: ${ft(fin)}<br>Megtakarítás: <b>${ft(p.nego.saving)}</b></p><p>${esc(v.note)}</p>` })
   log(p.id, 'Értékelés', 'Tárgyalási kör lezárva', `Nyertes: ${b.name} · ${ft(ini)} → ${ft(fin)} · megtakarítás: ${ft(p.nego.saving)}`)
   toast('Tárgyalás rögzítve', 'ok')
 }
@@ -232,8 +240,9 @@ export function savePrequal(pid, checked) {
 export function addTask(v) {
   if (!v.title.trim()) return 'Adja meg a feladat nevét.'
   if (!v.due) return 'Adja meg a határidőt.'
+  if (!v.owner) return 'Válassza ki a felelőst.'
   S.tasks.push({ id: uid(), pid: v.pid, title: v.title.trim(), desc: v.desc, owner: v.owner, by: S.user, due: v.due, done: null })
-  log(v.pid, 'Feladat', 'Feladat létrehozva', `${v.title.trim()} · felelős: ${v.owner} · határidő: ${fDay(v.due)}`)
+  log(v.pid, 'Feladat', 'Feladat létrehozva', `${v.title.trim()} · felelős: ${nm(v.owner)} · határidő: ${fDay(v.due)}`)
   toast('Feladat létrehozva', 'ok')
 }
 export function toggleTask(id, done) {
@@ -243,16 +252,8 @@ export function toggleTask(id, done) {
 }
 
 /* ---------- global ---------- */
-export function resetDemo() {
-  const th = S.theme
-  try { localStorage.removeItem(SKEY) } catch { /* noop */ }
-  const s = seedState(); s.theme = th
-  toast('Demó alaphelyzetbe állítva', 'ok')
-}
-export function ensureState() { const s = load(); setS(s && s.tasks ? s : seedState()); return S }
-export function clockNext() { S.today = addWD(S.today, 1); toast('Demó dátuma: ' + fDay(S.today)) }
 export function csvExport() {
-  const rows = [['Sorszám', 'Időpont', 'Felhasználó', 'Beszerzés', 'Típus', 'Esemény', 'Részletek', 'Hash']].concat(S.audit.map((e) => [e.n, e.ts, e.user, e.proc, e.type, e.title, e.detail, e.hash]))
+  const rows = [['Sorszám', 'Időpont', 'Felhasználó', 'E-mail', 'Beszerzés', 'Típus', 'Esemény', 'Részletek', 'Hash']].concat(S.audit.filter((e) => !e.test).map((e) => [e.n ?? '', e.ts, e.userName || nm(e.user), e.user, e.proc, e.type, e.title, e.detail, e.hash || '']))
   const csv = '﻿' + rows.map((r) => r.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(';')).join('\r\n')
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = 'auditnaplo_' + S.today + '.csv'
   document.body.appendChild(a); a.click(); a.remove()

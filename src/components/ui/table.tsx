@@ -48,7 +48,7 @@ const TableRow = ({ className, ...props }: React.ComponentProps<"tr">) => (
 const TableHead = ({ className, ...props }: React.ComponentProps<"th">) => (
   <th
     className={cn(
-      "h-10 whitespace-nowrap px-2 text-left align-middle font-medium text-foreground [&:has([role=checkbox])]:min-w-[56px] [&:has([role=checkbox])]:pr-0 [&:has([role=checkbox])]:text-center [&>[role=checkbox]]:mx-auto",
+      "h-9 whitespace-nowrap px-2 text-left align-middle text-xs font-medium text-muted-foreground [&:has([role=checkbox])]:min-w-[56px] [&:has([role=checkbox])]:pr-0 [&:has([role=checkbox])]:text-center [&>[role=checkbox]]:mx-auto",
       className,
     )}
     data-slot="table-head"

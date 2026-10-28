@@ -1,57 +1,60 @@
-# Fonte Viva – Beszerzési Központ (kattintható demó)
+# Fonte Viva – Beszerzési Központ
 
-Auditálható beszerzés- és tenderkövető prototípus a **Fonte Viva Kft. Beszerzési Szabályzata (01. verzió)** alapján.
-
-**Megnyitás:** `demo/index.html` – egyetlen, önálló fájl, dupla kattintással működik (nincs szerver, nincs telepítés).
-Az adatok a böngésző `localStorage`-ában élnek; a bal alsó „Alaphelyzet" gomb visszaállítja az induló állapotot.
+Beszerzés- és tenderkövető alkalmazás a **Fonte Viva Kft. Beszerzési Szabályzata** (PROC1–PROC6) alapján.
+Éles cím: **https://beszerzes.vercel.app** – csak Fonte Viva-s Microsoft-fiókkal lehet belépni.
 
 ```bash
 npm install
-npm run dev      # fejlesztői szerver
-npm run build    # tsc + vite → demo/index.html (single-file)
+npm run dev            # csak a felület (az /api végpontok a Vercelen futnak; helyben: `vercel dev`)
+npm run build          # tsc + vite → dist/
+npm run typecheck:api  # a szerveroldali függvények típusellenőrzése
 ```
 
-## Stack
+## Felépítés
 
-React 19 + TypeScript + Vite + Tailwind v4, **shadcn CLI**-vel telepített komponensek:
+| Réteg | Hol | Mit csinál |
+| --- | --- | --- |
+| Felület | `src/` (React 19, Vite, Tailwind v4, shadcn + Blode UI) | Irányítópult, beszerzések, jóváhagyások, feladatok, auditnapló, szabályzat, beállítások, bemutató (onboarding) |
+| Szabálymotor | `src/engine/` | Értékhatárok, kötelező dokumentumok, jóváhagyási láncok, PROC-lépések – UI-független |
+| Szinkron | `src/lib/sync.ts` | Minden módosítást pár száz ms után elküld (`/api/sync`); 90 mp-enként frissít, ha nincs nyitott ablak vagy mentetlen adat |
+| Szerver | `api/` (Vercel Functions) | Bejelentkezés, SharePoint-írás/olvasás Microsoft Graph-on keresztül, auditlánc |
 
-| Réteg | Forrás |
+### Bejelentkezés
+
+- `/api/auth/login` → Microsoft-fiókválasztó (`prompt=select_account`), csak a Fonte Viva tenant fiókjai (vendégfiók nem).
+- A munkamenet egy aláírt, HttpOnly süti, **10 óráig** érvényes; utána újra be kell jelentkezni.
+- Az első bejelentkező automatikusan **adminisztrátor** lesz; mindenki más az első belépéskor felkerül a Munkatársak listára. Inaktívra állított munkatárs nem léphet be.
+
+### SharePoint („Beszerzés” webhely)
+
+Az első betöltéskor az alkalmazás létrehozza a listákat (magyar oszlopnevekkel; az `AppData` rejtett oszlop a teljes rekordot tárolja):
+
+| Lista | Tartalom |
 | --- | --- |
-| Tokenek + komponensek (Button, Sheet, Dialog, Tabs, Stepper, Table, Select, Command, Popover, Sonner …) | [**Blode UI**](https://blode.co/ui) registry (`@blode`, Base UI + Tailwind v4) |
-| Kiegészítő registry (beállítva, ha további Base UI-komponens kell) | [**basecn**](https://basecn.dev) (`@basecn`) |
-| Mozgás- és részletszabályok | [Emil Kowalski design-eng skillek](https://github.com/emilkowalski/skills) elvei |
+| Beszerzések | tárgy, szervezet, költséghely, érték, kategória, eljárás, típus, szakasz, státusz, felelősök, határidők, nyertes, végső ár, mappa |
+| Ajánlattevők | beszerzés, e-mail, állapot, formai megfelelés, ár, fizetési/szállítási feltétel, műszaki pont |
+| Jóváhagyások | beszerzés, típus, kérte, állapot, jóváhagyók, döntések, jóváhagyott dokumentum |
+| Feladatok | leírás, felelős, kiosztotta, határidő, beszerzés, elvégezve |
+| Dokumentum-nyilvántartás | beszerzés, típus, verzió, ajánlattevő, feltöltötte, időpont, fájl hivatkozás |
+| Munkatársak | név, e-mail, beosztás, szerepkörök, admin, aktív |
+| Beállítások | szerepkör-kijelölések, költséghely-jóváhagyók, auditlánc feje |
+| Auditnapló | sorszám, időpont, felhasználó, beszerzés, típus, részletek, előző hash, hash |
+| Auditnapló – teszt | a TESZT beszerzések naplója (törölhető, nem része a láncnak) |
 
-Kowalski-elvek a kódban: erős egyedi ease-out görbék (`--ease-out`, `--ease-drawer`), 160–300 ms alatti UI-animációk, `:active` skálázás minden gombon, félig átlátszó árnyék a kemény keret helyett, belépő animáció csak navigációkor (nem minden állapotváltásnál), gyakori műveletek (⌘K, fülváltás) minimális mozgással.
+Dokumentumok: `Dokumentumok / Beszerzések / <azonosító tárgy> / 01 – … 11 – …` (a szabályzat szerinti almappák).
+Gyakorló beszerzések: `Dokumentumok / Teszt beszerzések / …` – ezek a beszerzés lapjáról véglegesen törölhetők.
 
-## Design
+### Auditnapló
 
-Alap shadcn / Blode UI megjelenés: fekete-fehér-szürke, a szín csak státuszt jelöl (piros / borostyán / zöld). Világos és sötét téma, mobilon alsó navigáció.
+Az eseményeket a **szerver** írja és láncolja (SHA-256, előző hash + sorszám + időpont + felhasználó + tartalom). A lánc feje ETag-gel védett, így párhuzamos mentésnél sem szakad meg. „Lánc ellenőrzése” = `/api/audit/verify`.
 
-## Amit a demó tud
+## Beállítás (egyszeri)
 
-- **Irányítópult**: KPI-csempék, folyamat-térkép (aktív beszerzések PROC-oszlopokban), teendők, élő szabályzati figyelmeztetések.
-- **PROC1–PROC6 folyamat**: az állapotot nem lehet közvetlenül átírni, csak műveleti gombokkal; minden lépésnél látszik, *mi hiányzik és kitől*.
-- **Szabály-motor** (`src/engine/engine.js`): értékhatár-besorolás (< 2 M / 2–20 M / > 20 M Ft), költséghely-jóváhagyók (11. melléklet), kötelező dokumentumcsomag típusonként, CEO+CFO jóváhagyás a tender kiküldése előtt, min. 3 ajánlattevő, SS és vészhelyzeti eljárás, 1–2 érvényes ajánlat kezelése, TCO/DCF CAPEX-nél, IFS-előminősítés, jogi+pénzügyi vélemény 20 M Ft felett, bankgarancia/CFO-eltérés, „az igénylő nem szavazhat", vészhelyzeti dokumentáció 5 munkanapon belül.
-- **Jóváhagyás dokumentumverzióhoz kötve** – új verzió érvényteleníti a korábbi döntéseket.
-- **Ajánlatkezelés**: arajanlat@ tendercsatorna, késve érkezett jelölés, lemondó nyilatkozat, **árak zárolva a bontásig**, bontási jegyzőkönyv, műszaki/kereskedelmi értékelés, súlyozott mátrix, TCO-számoló, tárgyalás és megtakarítás, SSD-generálás.
-- **Auditnapló**: csak hozzáfűzhető, hash-lánccal; „Lánc ellenőrzése", „Manipuláció szimulálása", CSV-export.
-- **Feladatok** felelőssel, határidővel, leírással.
-- Szerepkör-váltás (topbar és a részletek panel alján), **demó-óra** (+1 munkanap), ⌘/Ctrl+K parancspaletta.
+Vercel környezeti változók (Production): `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `SP_SITE_ID`; opcionálisan `SESSION_SECRET` (különben a kliens titokból származik) és `APP_ORIGIN` (alapértelmezés: `https://beszerzes.vercel.app`).
 
-## Szerkezet
+Entra ID alkalmazásregisztráció:
+1. **Authentication → Add a platform → Web**, Redirect URI: `https://beszerzes.vercel.app/api/auth/callback`
+2. **API permissions**: Microsoft Graph *Application* `Sites.Selected` (a „Beszerzés” webhelyre **write** joggal megadva) + *Delegated* `openid`, `profile`, `email` (admin consent).
+3. Ha csak kijelölt munkatársak léphetnek be: Enterprise applications → az alkalmazás → Properties → *Assignment required = Yes*, majd Users and groups alatt hozzárendelés.
 
-```
-src/engine/     szabály-motor, seed adatok, parancsok (UI-független, JS)
-src/components/ui/   Blode UI komponensek (shadcn CLI-vel)
-src/components/app/  oldalak, részletek panel, párbeszédablakok
-src/lib/        store (motor + UI állapot), közös UI segédek
-demo/index.html  kész, önálló build
-```
-
-## Éles megvalósítás felé
-
-Power Apps + SharePoint-listák és dokumentumtár + Power Automate (jóváhagyások), Entra ID azonosítás; tartós megőrzéshez Microsoft Purview record/retention label. Az `engine.js` szabályai a Power Automate-folyamatok és a lista-validációk specifikációjaként használhatók.
-
-## Ismert szabályzati eltérés
-
-Az 1. melléklet (BSD) 1/10 M Ft határokat említ; a demó a 7. fejezet (2/20 M Ft) egységes mátrixát használja.
+Ha a kliens titok lejár, új titkot kell létrehozni és a `MS_CLIENT_SECRET` értékét frissíteni (a meglévő bejelentkezések ilyenkor érvénytelenné válnak, ha nincs külön `SESSION_SECRET`).

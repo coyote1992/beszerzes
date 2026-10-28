@@ -49,7 +49,7 @@ const Textarea = ({
     <textarea
       aria-invalid={hasError || undefined}
       className={cn(
-        "field-sizing-content flex min-h-[var(--textarea-min-height)] w-full rounded-[var(--field-radius)] border border-input bg-card px-[var(--field-padding-x)] py-[var(--field-padding-y)] font-normal font-sans text-base text-foreground leading-snug shadow-input transition-colors placeholder:text-placeholder-foreground hover:border-input-hover focus:border-ring focus:outline-hidden focus:ring-2 focus:ring-ring/15 focus:ring-offset-1 focus:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
+        "field-sizing-content flex min-h-[var(--textarea-min-height)] w-full rounded-[var(--field-radius)] border border-input bg-card px-[var(--field-padding-x)] py-[var(--field-padding-y)] font-normal font-sans text-sm text-foreground leading-snug shadow-input transition-colors placeholder:text-placeholder-foreground hover:border-input-hover focus:border-ring focus:outline-hidden focus:ring-2 focus:ring-ring/15 focus:ring-offset-1 focus:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
         {
           "border-destructive-foreground": hasError,
           "hover:border-input! focus:border-input!": props.readOnly,

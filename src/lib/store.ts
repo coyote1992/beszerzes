@@ -1,11 +1,12 @@
 import { useSyncExternalStore } from 'react'
-import { save } from '@/engine/engine.js'
 import { notify } from '@/engine/notify.js'
+import { scheduleSync } from '@/lib/sync'
 
-/* ---- engine (domain) store: engine mutates S in place, we bump a version ---- */
+/* ---- engine (domain) store: engine mutates S in place, we bump a version and queue a save ---- */
 let ev = 0
 const esubs = new Set<() => void>()
-export function commit() { save(); ev++; esubs.forEach((f) => f()) }
+export function rerender() { ev++; esubs.forEach((f) => f()) }
+export function commit() { rerender(); scheduleSync() }
 export function useEngine() { return useSyncExternalStore((f) => (esubs.add(f), () => esubs.delete(f)), () => ev) }
 /** Run a command; string results are errors (shown as toasts). Returns the raw result. */
 export function run<T>(fn: () => T): T {
@@ -16,13 +17,13 @@ export function run<T>(fn: () => T): T {
 }
 
 /* ---- UI store ---- */
-export type View = 'dash' | 'procs' | 'appr' | 'tasks' | 'audit' | 'policy'
+export type View = 'dash' | 'procs' | 'appr' | 'tasks' | 'audit' | 'policy' | 'settings'
 export type Dlg = { _id?: number; type: string; pid?: string; key?: string; bid?: string; folder?: number; dec?: string } | null
 export const ui = {
   view: 'dash' as View, open: null as string | null, tab: 'ov',
   q: '', fType: '', fStage: '', fProc: '', taskF: 'me', apprTab: 'wait', auditQ: '', auditP: '', dashTab: 'all',
-  auditMsg: null as null | ['ok' | 'bad', string], tamper: null as null | { i: number; orig: string },
-  dialog: null as Dlg, palette: false,
+  auditMsg: null as null | ['ok' | 'bad', string],
+  dialog: null as Dlg, palette: false, tour: -1, sessionExpired: false,
 }
 let uv = 0
 const usubs = new Set<() => void>()
