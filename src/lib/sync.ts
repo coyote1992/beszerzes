@@ -1,6 +1,7 @@
 // Loads the shared state from SharePoint (via /api/data) and writes changes back (via /api/sync).
 // The policy engine mutates S in place; after every command we diff entities against the last saved snapshot.
-import { S, setS, emptyState, todayLocal, DEFAULT_CC, ROLE_LABEL, ATITLE, STAGES, nm, typeOf, statusOf, nextDue, dl } from '@/engine/engine.js'
+import { S, setS, emptyState, todayLocal, DEFAULT_CC, ROLE_LABEL, ATITLE, STAGES, nm, typeOf, statusOf, nextDue, dl, log } from '@/engine/engine.js'
+import { report } from '@/lib/report'
 
 type Ent = { t: string; key: string; obj: any; data: any; view: Record<string, unknown> }
 type SyncState = 'idle' | 'saving' | 'error'
@@ -38,16 +39,18 @@ const docView = (p: any, d: any) => ({ Title: d.name, Beszerzes: p.id, DokTipus:
 const taskView = (t: any) => ({ Title: t.title, Leiras: t.desc, Felelos: nm(t.owner), Kiosztotta: nm(t.by), Hatarido: t.due, Beszerzes: t.pid, Kesz: iso(t.done) })
 const personView = (pe: any) => ({ Title: pe.name, Email: pe.email, Beosztas: pe.title, Szerepkorok: pe.roleLabels || '', Admin: !!pe.admin, Aktiv: pe.active !== false })
 
+/** The readable columns are a convenience: a record they can't be built for is still saved, with just its title. */
+const safe = (f: () => Record<string, unknown>, title: string) => { try { return f() } catch (e) { report(e, 'view'); return { Title: title } } }
 function entities(): Ent[] {
   const out: Ent[] = []
   for (const p of S.procs) {
     const { docs, bidders, appr, ...rest } = p
-    out.push({ t: 'proc', key: p.id, obj: p, data: rest, view: procView(p) })
-    for (const b of bidders) out.push({ t: 'bidder', key: `${p.id}|${b.id}`, obj: b, data: { ...b, pid: p.id }, view: bidderView(p, b) })
-    for (const [k, a] of Object.entries<any>(appr)) out.push({ t: 'appr', key: `${p.id}|${k}|${a.id || a.req?.ts}`, obj: a, data: { ...a, pid: p.id, key: k }, view: apprView(p, k, a) })
-    for (const d of docs) out.push({ t: 'doc', key: d.id, obj: d, data: { ...d, pid: p.id }, view: docView(p, d) })
+    out.push({ t: 'proc', key: p.id, obj: p, data: rest, view: safe(() => procView(p), p.id) })
+    for (const b of bidders) out.push({ t: 'bidder', key: `${p.id}|${b.id}`, obj: b, data: { ...b, pid: p.id }, view: safe(() => bidderView(p, b), b.name || '') })
+    for (const [k, a] of Object.entries<any>(appr)) out.push({ t: 'appr', key: `${p.id}|${k}|${a.id || a.req?.ts}`, obj: a, data: { ...a, pid: p.id, key: k }, view: safe(() => apprView(p, k, a), p.id) })
+    for (const d of docs) out.push({ t: 'doc', key: d.id, obj: d, data: { ...d, pid: p.id }, view: safe(() => docView(p, d), d.name || '') })
   }
-  for (const t of S.tasks) out.push({ t: 'task', key: t.id, obj: t, data: t, view: taskView(t) })
+  for (const t of S.tasks) out.push({ t: 'task', key: t.id, obj: t, data: t, view: safe(() => taskView(t), t.title || '') })
   for (const pe of S.people) {
     const roleLabels = Object.entries<string>(S.roles || {}).filter(([, e]) => e === pe.email).map(([r]) => ROLE_LABEL[r] || r).join(', ')
     out.push({ t: 'person', key: pe.email, obj: pe, data: { email: pe.email, name: pe.name, title: pe.title || '', admin: !!pe.admin, active: pe.active !== false, roles: roleLabels }, view: personView({ ...pe, roleLabels }) })
@@ -95,7 +98,14 @@ export async function loadAll(canApply?: () => boolean): Promise<boolean> {
     const cur = apprs[a.pid]?.[a.key]
     if (!cur || (a.req?.ts || '') > (cur.req?.ts || '') || ((a.req?.ts || '') === (cur.req?.ts || '') && +a._sp > +cur._sp)) (apprs[a.pid] ||= {})[a.key] = a
   }
+  const moved: [string, number, number][] = []
   s.procs = d.procs
+    .map((p: any) => {
+      // PROC6 (Teljesítés) was removed: older records continue in the last stage. Missing parts get safe defaults.
+      const stage = Math.min(Math.max(1, Math.round(Number(p.stage)) || 1), STAGES.length)
+      if (stage !== p.stage) moved.push([p.id, p.stage, stage])
+      return { ...p, stage, value: Number(p.value) || 0, f: p.f || {}, due: p.due || {}, mail: Array.isArray(p.mail) ? p.mail : [], round: p.round || 1 }
+    })
     .map((p: any) => ({
       ...p,
       bidders: (bidders[p.id] || []).sort((a: any, b: any) => +a._sp - +b._sp),
@@ -110,6 +120,10 @@ export async function loadAll(canApply?: () => boolean): Promise<boolean> {
   if (canApply && !canApply()) return false
   setS(s)
   rememberAll()
+  if (moved.length) {
+    for (const [id, from, to] of moved) { snap.delete(`proc:${id}`); log(id, 'Státusz', 'Szakasz áthelyezve', `PROC${from} → PROC${to} (a Teljesítés szakasz megszűnt)`) }
+    scheduleSync(1500)
+  }
   failures.clear()
   state = 'idle'; lastError = ''; emit()
   return true

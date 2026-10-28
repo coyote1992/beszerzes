@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Component, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useEngine, useUI, rerender, setUI, ui } from '@/lib/store'
 import { AuthError, flush, hasPending, loadAll, setAuthLostHandler } from '@/lib/sync'
 import { Toaster } from '@/components/ui/sonner'
@@ -12,8 +12,32 @@ import { ProcSheet } from '@/components/app/ProcSheet'
 import { Dialogs } from '@/components/app/Dialogs'
 import { Tour } from '@/components/app/Tour'
 import { DecisionTree } from '@/components/app/Tree'
+import { report } from '@/lib/report'
 
 const REFRESH_MS = 90_000
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', (e) => report(e.error || e.message, 'window'))
+  window.addEventListener('unhandledrejection', (e) => report(e.reason, 'promise'))
+}
+
+/** Keeps a rendering bug in one view from blanking the whole app. */
+class Boundary extends Component<{ children: ReactNode }, { err: Error | null }> {
+  state = { err: null as Error | null }
+  static getDerivedStateFromError(err: Error) { return { err } }
+  componentDidCatch(err: Error) { report(err, 'render') }
+  render() {
+    if (!this.state.err) return this.props.children
+    return (
+      <Splash>
+        <h1 className="text-base font-semibold">Váratlan hiba történt</h1>
+        <p className="text-sm text-muted-foreground">{this.state.err.message}</p>
+        <p className="text-xs text-muted-foreground">A hibát automatikusan jelentettük. A mentett adatok nem vesztek el.</p>
+        <Button onClick={() => location.reload()}>Újratöltés</Button>
+      </Splash>
+    )
+  }
+}
+
 const login = () => location.replace('/api/auth/login?returnTo=' + encodeURIComponent(location.pathname + location.search))
 
 function Splash({ children }: { children: React.ReactNode }) {
@@ -53,7 +77,7 @@ export default function App() {
     setPhase('loading'); setSlow(false)
     const t = setTimeout(() => setSlow(true), 4000)
     try { await loadAll(); lastLoad.current = Date.now(); setPhase('ready') }
-    catch (e) { if (e instanceof AuthError) return login(); setErr((e as Error).message); setPhase('error') }
+    catch (e) { if (e instanceof AuthError) return login(); report(e, 'load'); setErr((e as Error).message); setPhase('error') }
     finally { clearTimeout(t) }
   }, [])
 
@@ -88,6 +112,7 @@ export default function App() {
     </Splash>
   )
   return (
+    <Boundary>
     <TooltipProvider>
       <Shell>
         {u.view === 'dash' && <Dashboard />}
@@ -105,5 +130,6 @@ export default function App() {
       <SessionExpired />
       <Toaster position="top-center" />
     </TooltipProvider>
+    </Boundary>
   )
 }
