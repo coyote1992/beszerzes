@@ -2,14 +2,14 @@ import { gj } from './graph.js'
 import { appData, itemsPath, lists, loadRows, toFields } from './schema.js'
 import { json, sessionFromRequest, unauthorized, type SessionUser } from './session.js'
 
-export type Person = { email: string; name: string; title: string; admin: boolean; active: boolean; _sp?: string }
+export type Person = { email: string; name: string; title: string; admin: boolean; active: boolean; testProxy?: boolean; _sp?: string }
 
 export function rowToPerson(r: any): Person | null {
   const f = r.fields || {}
   const d: any = appData(r) || {}
   const email = String(d.email || f.Email || '').toLowerCase()
   if (!email) return null
-  return { email, name: d.name || f.Title || email, title: d.title ?? f.Beosztas ?? '', admin: !!(d.admin ?? f.Admin), active: (d.active ?? f.Aktiv) !== false, _sp: r.id }
+  return { email, name: d.name || f.Title || email, title: d.title ?? f.Beosztas ?? '', admin: !!(d.admin ?? f.Admin), active: (d.active ?? f.Aktiv) !== false, testProxy: !!d.testProxy, _sp: r.id }
 }
 
 export async function loadPeople(): Promise<Person[]> {

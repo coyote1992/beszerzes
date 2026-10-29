@@ -117,8 +117,8 @@ export function pendingFor(user){
     if(a.status==='pending'&&(canProxy(p,user)||a.per.some(x=>x.name===user&&(x.state==='pending'||x.state==='stale'))))out.push({p,key:k,a});});});
   return out;
 }
-/** On a TEST procurement its creator (or an admin) decides for every approver, so the whole flow can be tried alone. */
-export const canProxy=(p,user)=>!!p.test&&!p.closed&&(p.createdBy===user||!!(S.me&&S.me.admin&&user===S.user));
+/** On a TEST procurement its creator, an admin or a person marked as test approver decides for every approver, so the whole flow can be tried alone. */
+export const canProxy=(p,user)=>{if(!p.test||p.closed)return false;if(p.createdBy===user)return true;const pe=personOf(user);return !!(pe&&(pe.admin||pe.testProxy))||!!(user===S.user&&S.me&&S.me.admin);};
 export function decide(p,key,dec,comment){
   const a=apprState(p,key);
   if(canProxy(p,S.user)){

@@ -272,12 +272,13 @@ export function Settings() {
         </Panel>
         <Panel i={2} className="overflow-hidden"><PanelHead title="Munkatársak" sub="Aki bejelentkezik a Fonte Viva fiókjával, automatikusan felkerül. Inaktív munkatárs nem léphet be." />
           {people.length === 0 ? <Empty>Még nincs munkatárs.</Empty> : (
-            <Table><TableHeader><TableRow><TableHead className="pl-4">Név</TableHead><TableHead>Szerepkör</TableHead><TableHead>Admin</TableHead><TableHead className="pr-4">Aktív</TableHead></TableRow></TableHeader>
+            <Table><TableHeader><TableRow><TableHead className="pl-4">Név</TableHead><TableHead>Szerepkör</TableHead><TableHead>Admin</TableHead><TableHead title="TESZT beszerzéseken minden jóváhagyást rögzíthet a jóváhagyók nevében">Teszt-jóváhagyó</TableHead><TableHead className="pr-4">Aktív</TableHead></TableRow></TableHeader>
               <TableBody>{people.map((pe: any) => { const self = pe.email === S.user; const roles = ROLES.filter(([r]: string[]) => S.roles[r] === pe.email).map(([, l]: string[]) => l); return (
                 <TableRow key={pe.email}>
                   <TableCell className="pl-4"><span className="block text-sm font-medium">{pe.name}{self && <span className="ml-1 text-xs font-normal text-muted-foreground">(te)</span>}</span><span className="text-xs text-muted-foreground">{pe.email}{pe.title ? ' · ' + pe.title : ''}</span></TableCell>
                   <TableCell className="text-xs text-muted-foreground">{roles.join(', ') || '–'}</TableCell>
                   <TableCell><Checkbox disabled={!admin || self} checked={!!pe.admin} onCheckedChange={(v: any) => setPerson(pe, { admin: !!v }, v ? 'adminisztrátor' : 'nem adminisztrátor')} /></TableCell>
+                  <TableCell title={pe.admin ? 'Adminisztrátorként ez a jog már megvan' : 'TESZT beszerzéseken minden jóváhagyást rögzíthet a jóváhagyók nevében'}><Checkbox disabled={!admin || !!pe.admin} checked={!!pe.admin || !!pe.testProxy} onCheckedChange={(v: any) => setPerson(pe, { testProxy: !!v }, v ? 'teszt-jóváhagyó' : 'nem teszt-jóváhagyó')} /></TableCell>
                   <TableCell className="pr-4"><Checkbox disabled={!admin || self} checked={pe.active !== false} onCheckedChange={(v: any) => setPerson(pe, { active: !!v }, v ? 'aktív' : 'inaktív')} /></TableCell>
                 </TableRow>) })}</TableBody></Table>)}
         </Panel>

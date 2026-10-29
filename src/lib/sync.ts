@@ -53,7 +53,7 @@ function entities(): Ent[] {
   for (const t of S.tasks) out.push({ t: 'task', key: t.id, obj: t, data: t, view: safe(() => taskView(t), t.title || '') })
   for (const pe of S.people) {
     const roleLabels = Object.entries<string>(S.roles || {}).filter(([, e]) => e === pe.email).map(([r]) => ROLE_LABEL[r] || r).join(', ')
-    out.push({ t: 'person', key: pe.email, obj: pe, data: { email: pe.email, name: pe.name, title: pe.title || '', admin: !!pe.admin, active: pe.active !== false, roles: roleLabels }, view: personView({ ...pe, roleLabels }) })
+    out.push({ t: 'person', key: pe.email, obj: pe, data: { email: pe.email, name: pe.name, title: pe.title || '', admin: !!pe.admin, active: pe.active !== false, testProxy: !!pe.testProxy, roles: roleLabels }, view: personView({ ...pe, roleLabels }) })
   }
   out.push({ t: 'setting', key: 'roles', obj: S._settings.roles, data: S.roles, view: { Title: 'roles' } })
   out.push({ t: 'setting', key: 'cc', obj: S._settings.cc, data: S.cc, view: { Title: 'cc' } })
