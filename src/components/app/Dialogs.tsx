@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { LockIcon } from 'blode-icons-react'
-import { log, applyRoles, isBuiltinRole, ROLE_LABEL } from '@/engine/engine.js'
+import { log, applyRoles, isBuiltinRole, ROLE_LABEL, canProxy } from '@/engine/engine.js'
 import {
   S, ORGS, CC, DOCS, SCM, nm, TYPEDESC, ccApprover, typeOf, P, docLatest, ranking, validBids, ft, fDay, addD, addWD, dl, apprState, ATITLE,
 } from '@/engine/engine.js'
@@ -27,6 +27,34 @@ type Props = {
   onSubmit?: (v: V) => string | void | false | undefined | object | Promise<string | void | false | undefined | object>; onChange?: (name: string, val: any, v: V) => V | void
 }
 
+const kb = (n: number) => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB')
+/** Picks one or more files; a second pick adds to the list. */
+function FilesInput({ files, onChange }: { files: File[]; onChange: (f: File[]) => void }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <input type="file" multiple className="block w-full rounded-md border p-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-primary-foreground"
+        onChange={(e) => { const add = Array.from(e.target.files || []); e.target.value = ''; onChange([...files, ...add.filter((a) => !files.some((x) => x.name === a.name && x.size === a.size))]) }} />
+      {files.length > 0 && <ul className="flex flex-col gap-1">{files.map((x, i) => (
+        <li key={x.name + i} className="flex items-center gap-2 rounded-md bg-muted/60 px-2 py-1 text-xs font-normal">
+          <span className="min-w-0 flex-1 truncate">{x.name}</span><span className="text-muted-foreground">{kb(x.size)}</span>
+          <button type="button" aria-label="Eltávolítás" className="text-muted-foreground hover:text-foreground" onClick={() => onChange(files.filter((_, j) => j !== i))}>✕</button>
+        </li>))}</ul>}
+    </div>
+  )
+}
+/** Uploads files one by one. On a partial failure the failed files stay selected and the uploaded ones are kept,
+ *  so a retry completes the same document version instead of starting a new one. */
+async function uploadAll(path: string, files: File[], v: V): Promise<{ ok: any[]; error?: string }> {
+  const ok: any[] = [...(v._done || [])], failed: File[] = []
+  let error = ''
+  for (let i = 0; i < files.length; i++) {
+    try { ok.push(await uploadFile(path, files[i], (pct: number) => v._progress(files.length > 1 ? `Feltöltés ${i + 1}/${files.length} · ${pct}%` : `Feltöltés… ${pct}%`))) }
+    catch (e) { failed.push(files[i]); error = (e as Error).message }
+  }
+  if (failed.length) { v._set('files', failed); v._set('_done', ok); return { ok, error: `${failed.length} fájl feltöltése nem sikerült (${error}). A sikertelenek kijelölve maradtak – próbáld újra.` } }
+  return { ok }
+}
+
 function FieldView({ f, v, set }: { f: Field; v: V; set: (n: string, x: any) => void }) {
   if (f.show && !f.show(v)) return null
   const val = v[f.name]
@@ -35,7 +63,7 @@ function FieldView({ f, v, set }: { f: Field; v: V; set: (n: string, x: any) => 
     case 'textarea': ctl = <Textarea rows={f.rows || 3} value={val ?? ''} placeholder={f.ph} onChange={(e) => set(f.name, e.target.value)} />; break
     case 'select': ctl = <Sel value={val ?? ''} options={f.opts || []} onChange={(x) => set(f.name, x)} />; break
     case 'date': ctl = <Input type="date" value={val ?? ''} onChange={(e) => set(f.name, e.target.value)} />; break
-    case 'file': ctl = <input type="file" className="block w-full rounded-md border p-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-primary-foreground" onChange={(e) => set(f.name, e.target.files?.[0] || null)} />; break
+    case 'file': ctl = <FilesInput files={val || []} onChange={(fs) => set(f.name, fs)} />; break
     case 'readonly': ctl = <Input readOnly value={val ?? ''} className="opacity-70" />; break
     case 'check': return (
       <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border p-2.5 text-sm"><Checkbox className="mt-0.5" checked={!!val} onCheckedChange={(x: any) => set(f.name, !!x)} /><span><span className="block font-medium">{f.title}</span><span className="text-muted-foreground">{f.hint}</span></span></label>)
@@ -56,7 +84,7 @@ function FormDialog(p: Props) {
     if (!p.onSubmit) return closeDlg()
     setBusy('Folyamatban…')
     let r: any
-    try { r = await p.onSubmit({ ...v, _progress: (t: string) => setBusy(t) }) } catch (e) { r = (e as Error).message } finally { setBusy(null) }
+    try { r = await p.onSubmit({ ...v, _progress: (t: string) => setBusy(t), _set: set }) } catch (e) { r = (e as Error).message } finally { setBusy(null) }
     if (typeof r === 'string') return r === 'x' ? undefined : notify(r, 'bad')
     if (r === false) return
     if (p.keepOpen) return setV(p.initial || {})
@@ -118,16 +146,46 @@ function NewProc({ test = false }: { test?: boolean }) {
       onSubmit={(v) => { const r: any = run(() => C.createProc(v)); if (typeof r === 'string') return r; setUI({ open: r.id, tab: 'ov', view: 'procs' }); void cls }} />
   )
 }
+function EditProc({ pid }: { pid: string }) {
+  const p = P(pid)
+  const ccOpts: Opt[] = Object.keys(CC).map((k) => [k, `${k} · ${CC[k].n}`])
+  const people = peopleOpts()
+  const withCurrent = (e: string): Opt[] => (e && !people.some(([x]) => x === e) ? [[e, nm(e)], ...people] : people)
+  return (
+    <FormDialog kicker={p.id} title="Beszerzés adatainak módosítása" ok="Mentés"
+      desc="Az azonosító és a SharePoint-mappa nem változik. Ha a módosítás miatt változik a besorolás vagy a jóváhagyó, a kötelező lépések és a jóváhagyások ehhez igazodnak; minden változás az auditnaplóba kerül."
+      initial={{ procLabel: C.procLabel(p.proc), subject: p.subject, org: p.org, cc: p.cc, value: String(p.value), cat: p.cat, proc: p.proc, desired: p.desired || '', requester: p.requester, owner: p.owner, ifs: !!p.ifs, maint: !!p.maint, prepay: !!p.prepay, it: !!p.it }}
+      fields={[
+        { name: 'subject', full: true, label: 'Beszerzés tárgya' },
+        { name: 'org', label: 'Igénylő szervezet', kind: 'select', opts: ORGS.map((o: string[]) => [o[0], o[0]] as Opt) },
+        { name: 'cc', label: 'Költséghely', kind: 'select', opts: ccOpts },
+        { name: 'value', label: 'Becsült nettó érték (Ft)', kind: 'number' },
+        { name: 'cat', label: 'Beszerzési kategória', kind: 'select', opts: ['Direkt', 'Indirekt', 'CAPEX', 'OPEX'].map((x) => [x, x] as Opt) },
+        p.stage === 1 ? { name: 'proc', label: 'Eljárás', kind: 'select', opts: [['Tender', 'Tender'], ['SS', 'Sole Source'], ['Vészhelyzeti', 'Vészhelyzeti']] }
+          : { name: 'procLabel', label: 'Eljárás', kind: 'readonly', hint: 'Csak az igény szakaszában (PROC1) módosítható.' },
+        { name: 'desired', label: 'Kívánt teljesítés', kind: 'date' },
+        { name: 'requester', label: 'Igénylő személy', kind: 'select', opts: withCurrent(p.requester) },
+        { name: 'owner', label: 'Felelős beszerző', kind: 'select', opts: withCurrent(p.owner) },
+        { name: 'ifs', kind: 'check', title: 'IFS-kritikus beszerzés', hint: 'Minőségirányítási előminősítés és dokumentumkontroll szükséges.' },
+        { name: 'maint', kind: 'check', title: 'Fenntartó beruházás', hint: 'A TCO/DCF kalkuláció alól mentes.', show: (v) => v.cat === 'CAPEX' },
+        { name: 'prepay', kind: 'check', title: 'Előlegfizetéssel járó szerződés', hint: 'Bankgarancia vagy CFO eltérés-engedély szükséges.' },
+        { name: 'it', kind: 'check', title: 'IT / adatkezelést érintő', hint: 'Kiberbiztonsági záradék szükséges.' },
+      ]}
+      onChange={(n, x) => { if (n === 'org') { const o = ORGS.find((y: string[]) => y[0] === x); return o ? { cc: o[1] } : undefined } }}
+      after={(v) => { const t0 = typeOf(p.value), t1 = typeOf(num(v.value) || 0); return t0 !== t1 ? <Note tone="warn">A besorolás megváltozik: <b>{t0} → {t1}</b>. Ezzel változhatnak a kötelező dokumentumok és a jóváhagyók.</Note> : null }}
+      onSubmit={(v) => run(() => C.editProc(pid, { ...v, proc: p.stage === 1 ? v.proc : p.proc })) as any} />
+  )
+}
 function Upload({ pid, k, folder }: { pid: string; k?: string; folder?: number }) {
   const keys = folder ? Object.keys(DOCS).filter((x) => DOCS[x][1] === folder && x !== 'bid' && x !== 'invit') : []
-  return <FormDialog kicker={'Dokumentumtár · ' + pid} title={k ? dl(k) : 'Dokumentum feltöltése'} ok="Feltöltés" initial={{ key: k || keys[0], file: null, note: '' }}
-    fields={[...(folder ? [{ name: 'key', label: 'Dokumentumtípus', kind: 'select' as const, opts: keys.map((x) => [x, dl(x)] as Opt) }] : []), { name: 'file', full: true, label: 'Fájl', kind: 'file', hint: 'A fájl a beszerzés SharePoint-mappájába kerül. Azonos típusú új feltöltés új verziót hoz létre.' }, { name: 'note', full: true, label: 'Megjegyzés / verzióleírás' }]}
+  return <FormDialog kicker={'Dokumentumtár · ' + pid} title={k ? dl(k) : 'Dokumentum feltöltése'} ok="Feltöltés" initial={{ key: k || keys[0], files: [], note: '' }}
+    fields={[...(folder ? [{ name: 'key', label: 'Dokumentumtípus', kind: 'select' as const, opts: keys.map((x) => [x, dl(x)] as Opt) }] : []), { name: 'files', full: true, label: 'Fájlok', kind: 'file', hint: 'Egyszerre több fájl is kiválasztható. A fájlok a beszerzés SharePoint-mappájába kerülnek; az egyszerre feltöltöttek együtt alkotnak egy verziót, egy későbbi feltöltés új verziót hoz létre.' }, { name: 'note', full: true, label: 'Megjegyzés / verzióleírás' }]}
     onSubmit={async (v) => {
-      if (!v.file) return 'Válassza ki a feltöltendő fájlt.'
+      if (!v.files.length && !v._done?.length) return 'Válassza ki a feltöltendő fájlokat.'
       await flush()
-      const p = P(pid)
-      const up = await uploadFile(C.docPath(p, v.key), v.file, (pct: number) => v._progress(`Feltöltés… ${pct}%`))
-      return run(() => C.uploadDoc(pid, { key: v.key, file: up, note: v.note })) as any
+      const { ok, error } = await uploadAll(C.docPath(P(pid), v.key), v.files, v)
+      if (error) return error
+      return run(() => C.uploadDoc(pid, { key: v.key, files: ok, note: v.note })) as any
     }} />
 }
 function Flag({ pid, k }: { pid: string; k: string }) {
@@ -136,7 +194,8 @@ function Flag({ pid, k }: { pid: string; k: string }) {
 function Decide({ pid, k, dec }: { pid: string; k: string; dec: string }) {
   const p = P(pid), a = apprState(p, k), ap = dec === 'approve'
   return <FormDialog kicker={ATITLE[k]} title={ap ? 'Jóváhagyás megerősítése' : 'Elutasítás'} ok={ap ? 'Jóváhagyom' : 'Elutasítom'} danger={!ap} initial={{ c: '' }}
-    before={<Note>A döntés a <b>{a.doc ? dl(a.bound) + ' v' + a.ver : 'beszerzés'}</b> dokumentumverzióhoz és a jelenlegi időbélyeghez kötődik ({S.user}). Új verzió feltöltése érvényteleníti.</Note>}
+    before={<>{canProxy(p, S.user) && <Note tone="warn"><b>Teszt beszerzés:</b> a döntést minden jóváhagyó nevében te rögzíted ({a.per.map((x: any) => nm(x.name)).join(' + ')}), hogy végig tudd kattintani a folyamatot. Valódi beszerzésnél mindenki maga dönt.</Note>}
+      <Note>A döntés a <b>{a.doc ? dl(a.bound) + ' v' + a.ver : 'beszerzés'}</b> dokumentumverzióhoz és a jelenlegi időbélyeghez kötődik. Új verzió feltöltése érvényteleníti.</Note></>}
     fields={[{ name: 'c', kind: 'textarea', label: ap ? 'Megjegyzés (opcionális)' : 'Indoklás (kötelező)' }]}
     onSubmit={(v) => run(() => C.decideApproval(pid, k, ap ? 'approve' : 'reject', v.c)) as any} desc={`${p.subject} · ${ft(p.value)}`} />
 }
@@ -154,14 +213,14 @@ function Bidders({ pid }: { pid: string }) {
 }
 function BidRecv({ pid, bid }: { pid: string; bid: string }) {
   const p = P(pid), b = p.bidders.find((x: any) => x.id === bid), vh = p.proc === 'Vészhelyzeti', late = p.bidDeadline && S.today > p.bidDeadline
-  return <FormDialog kicker="PROC3 · Ajánlat beérkezése" title={b.name} ok="Rögzítés" initial={{ file: null, sender: b.email, price: p.value, note: '' }}
+  return <FormDialog kicker="PROC3 · Ajánlat beérkezése" title={b.name} ok="Rögzítés" initial={{ files: [], sender: b.email, price: p.value, note: '' }}
     before={late ? <Note tone="bad">A határidő ({fDay(p.bidDeadline)}) lejárt – az ajánlat késve érkezettként, formailag érvénytelenként rögzül.</Note> : undefined}
-    fields={[{ name: 'file', full: true, label: 'Ajánlat fájlja', kind: 'file', hint: 'A fájl a „04 – Beérkezett ajánlatok” mappába kerül. Az árak az alkalmazásban a bontásig zároltak.' }, { name: 'sender', label: 'Feladó' }, { name: 'price', label: 'Ajánlati ár (nettó Ft)', kind: 'number', show: () => vh }, { name: 'note', label: 'Megjegyzés' }]}
-    onSubmit={async (v) => { if (!v.file) return 'Csatolja az ajánlat fájlját.'; await flush(); const up = await uploadFile(C.docPath(P(pid), 'bid'), v.file, (pct: number) => v._progress(`Feltöltés… ${pct}%`)); return run(() => C.recvBid(pid, bid, { ...v, file: up })) as any }} />
+    fields={[{ name: 'files', full: true, label: 'Ajánlat fájljai', kind: 'file', hint: 'A fájl a „04 – Beérkezett ajánlatok” mappába kerül. Az árak az alkalmazásban a bontásig zároltak.' }, { name: 'sender', label: 'Feladó' }, { name: 'price', label: 'Ajánlati ár (nettó Ft)', kind: 'number', show: () => vh }, { name: 'note', label: 'Megjegyzés' }]}
+    onSubmit={async (v) => { if (!v.files.length) return 'Csatolja az ajánlat fájljait.'; await flush(); const { ok, error } = await uploadAll(C.docPath(P(pid), 'bid'), v.files, v); if (error) return error; return run(() => C.recvBid(pid, bid, { ...v, files: ok })) as any }} />
 }
 function BidDecl({ pid, bid }: { pid: string; bid: string }) {
   const b = P(pid).bidders.find((x: any) => x.id === bid)
-  return <FormDialog kicker="PROC3 · Lemondó nyilatkozat" title={b.name} ok="Rögzítés" initial={{ file: null, note: '' }} fields={[{ name: 'file', label: 'Nyilatkozat fájlja', kind: 'file' }, { name: 'note', label: 'Indoklás', ph: 'pl. kapacitáshiány' }]} onSubmit={async (v) => { let up = null; if (v.file) { await flush(); up = await uploadFile(C.docPath(P(pid), 'bid'), v.file, (pct: number) => v._progress(`Feltöltés… ${pct}%`)) } return run(() => C.declineBid(pid, bid, { ...v, file: up })) as any }} />
+  return <FormDialog kicker="PROC3 · Lemondó nyilatkozat" title={b.name} ok="Rögzítés" initial={{ files: [], note: '' }} fields={[{ name: 'files', full: true, label: 'Nyilatkozat fájljai (opcionális)', kind: 'file' }, { name: 'note', label: 'Indoklás', ph: 'pl. kapacitáshiány' }]} onSubmit={async (v) => { let ok: any[] = []; if (v.files.length) { await flush(); const r = await uploadAll(C.docPath(P(pid), 'bid'), v.files, v); if (r.error) return r.error; ok = r.ok } return run(() => C.declineBid(pid, bid, { ...v, files: ok })) as any }} />
 }
 function Send({ pid }: { pid: string }) {
   const p = P(pid)
@@ -310,6 +369,7 @@ export function Dialogs() {
   const pid = d.pid || '', key = d.key || '', bid = d.bid || ''
   switch (d.type) {
     case 'new': return <NewProc key={k} test={key === 'test'} />
+    case 'editproc': return <EditProc key={k} pid={pid} />
     case 'upload': return <Upload key={k} pid={pid} k={key || undefined} folder={d.folder} />
     case 'flag': return <Flag key={k} pid={pid} k={key} />
     case 'decide': return <Decide key={k} pid={pid} k={key} dec={d.dec || 'approve'} />

@@ -114,11 +114,21 @@ export function apprState(p,key){
 export function pendingFor(user){
   const out=[];
   S.procs.forEach(p=>{if(p.closed)return;Object.keys(p.appr).forEach(k=>{const a=apprState(p,k);
-    if(a.status==='pending'&&a.per.some(x=>x.name===user&&(x.state==='pending'||x.state==='stale')))out.push({p,key:k,a});});});
+    if(a.status==='pending'&&(canProxy(p,user)||a.per.some(x=>x.name===user&&(x.state==='pending'||x.state==='stale'))))out.push({p,key:k,a});});});
   return out;
 }
+/** On a TEST procurement its creator (or an admin) decides for every approver, so the whole flow can be tried alone. */
+export const canProxy=(p,user)=>!!p.test&&!p.closed&&(p.createdBy===user||!!(S.me&&S.me.admin&&user===S.user));
 export function decide(p,key,dec,comment){
-  const a=apprState(p,key);const me=a.per.find(x=>x.name===S.user);
+  const a=apprState(p,key);
+  if(canProxy(p,S.user)){
+    if(a.bound&&!a.doc){toast('Nincs jóváhagyandó dokumentum.','bad');return false;}
+    const who=a.per.filter(x=>x.state!==(dec==='approve'?'approved':'rejected'));
+    who.forEach(x=>p.appr[key].decisions.push({by:x.name,dec,ts:stamp(),ver:a.ver,c:comment||'',proxy:S.user}));
+    log(p.id,'Jóváhagyás',(dec==='approve'?ATITLE[key]+' jóváhagyva':ATITLE[key]+' elutasítva')+' (teszt)',`${nm(S.user)} rögzítette ${who.map(x=>nm(x.name)).join(' + ')} nevében · ${a.bound?dl(a.bound)+' v'+a.ver:'—'}${comment?' · „'+comment+'"':''}`);
+    return true;
+  }
+  const me=a.per.find(x=>x.name===S.user);
   if(!me){toast('Ezt a jóváhagyást nem Ön végzi. Jóváhagyó: '+a.required.map(nm).join(' + '),'bad');return false;}
   if((key==='ssd'||key==='ss')&&S.user===p.requester){toast('Az igénylő nem vehet részt a végső jóváhagyásban (9.4.4).','bad');return false;}
   if(a.bound&&!a.doc){toast('Nincs jóváhagyandó dokumentum.','bad');return false;}
@@ -147,7 +157,7 @@ export function checklist(p){
   const L=[],s=p.stage,t=typeOf(p.value);
   if(p.closed)return L;
   const push=o=>L.push(Object.assign({acts:[]},o));
-  const dI=(key,label,who,o)=>{const d=docLatest(p,key);push(Object.assign({id:'d-'+key,label,who,done:!!d,ev:d?`${d.name} · v${d.ver} · ${nm(d.by)}`:'',acts:[{a:'doc',k:key,l:d?'Új verzió':'Feltöltés',p:!d}]},o||{}));};
+  const dI=(key,label,who,o)=>{const d=docLatest(p,key),n=d?docs(p,key).filter(x=>x.ver===d.ver).length:0;push(Object.assign({id:'d-'+key,label,who,done:!!d,ev:d?`${d.name}${n>1?` + ${n-1} további fájl`:''} · v${d.ver} · ${nm(d.by)}`:'',acts:[{a:'doc',k:key,l:d?'Új verzió':'Feltöltés',p:!d}]},o||{}));};
   const fI=(key,label,who,o)=>{const f=p.f[key];push(Object.assign({id:'f-'+key,label,who,done:!!f,ev:f?`${nm(f.by)} · ${fdt(f.ts)}${f.note?' · '+f.note:''}`:'',acts:f?[]:[{a:'flag',k:key,l:'Igazolom',p:true}]},o||{}));};
   const aI=(key,label,o)=>{const a=apprState(p,key);const miss=a.bound&&!a.doc;push(Object.assign({id:'a-'+key,label,short:ATITLE[key]+' jóváhagyása',who:a.required.join(' + '),done:a.status==='approved',appr:a,acts:a.requested?[]:[{a:'apprReq',k:key,l:'Jóváhagyás indítása',p:true}],blocked:!a.requested&&miss?'Előbb töltse fel: '+dl(a.bound):null},o||{}));};
   const VH=p.proc==='Vészhelyzeti',SS=p.proc==='SS';
@@ -176,7 +186,7 @@ export function checklist(p){
     const ta=apprState(p,'tender'),n=p.bidders.length,rc=p.bidders.filter(b=>b.status!=='meghívva').length;
     push({id:'send',label:'Ajánlatkérés kiküldése (arajanlat@fonteviva.hu) és rögzítése',short:'Ajánlatkérés kiküldése',who:p.owner,done:!!p.f.sent,ev:p.f.sent?`${nm(p.f.sent.by)} · ${fdt(p.f.sent.ts)} · ${n} címzett · határidő: ${fDay(p.bidDeadline)}`:'',blocked:!p.f.sent&&ta.status!=='approved'?'A kiküldéshez CEO + CFO jóváhagyás szükséges':null,acts:p.f.sent?[]:[{a:'send',l:'Kiküldés rögzítése',p:true}]});
     push({id:'resp',label:`Ajánlatok / lemondó nyilatkozatok beérkezése (${rc}/${n})`,short:'Ajánlattételi határidő',who:p.owner,due:p.bidDeadline,done:!!p.f.sent&&(allResp(p)||(p.bidDeadline&&S.today>=p.bidDeadline)||!!p.f.opened),ev:p.f.sent?'Ajánlattételi határidő: '+fDay(p.bidDeadline):'',acts:[{a:'tab',k:'bids',l:'Ajánlatok'}]});
-    const early=p.bidDeadline&&S.today<p.bidDeadline&&!allResp(p);
+    const early=!p.test&&p.bidDeadline&&S.today<p.bidDeadline&&!allResp(p);
     push({id:'open',label:'Ajánlatbontás és bontási jegyzőkönyv',short:'Ajánlatbontás',who:p.owner,due:p.bidDeadline,done:!!p.f.opened,ev:p.f.opened?`${nm(p.f.opened.by)} · ${fdt(p.f.opened.ts)}`:'',blocked:!p.f.opened&&(!p.f.sent?'Előbb küldje ki a tendert':(early?`A határidő (${fDay(p.bidDeadline)}) előtt nem bontható`:null)),acts:p.f.opened?[]:[{a:'open',l:'Ajánlatbontás',p:true}]});
     if(p.f.opened){
       const v=validBids(p).length;

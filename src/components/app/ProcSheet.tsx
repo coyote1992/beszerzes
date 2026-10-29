@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
-import { CheckIcon, CircleExclamationIcon, ClockIcon, FileTextIcon, FolderOpenIcon, HourglassIcon, LockIcon, PlusMediumIcon, TrashIcon } from 'blode-icons-react'
+import { CheckIcon, CircleExclamationIcon, ClockIcon, EditIcon, FileTextIcon, FolderOpenIcon, HourglassIcon, LockIcon, PlusMediumIcon, TrashIcon } from 'blode-icons-react'
 import {
-  S, STAGES, CC, DOCS, FOLDERS, ATITLE, ADESC, W, apprState, checklist, docs, dl, fdt, fDay, fShort, ft, nextDue, nextStage, ranking, rules, short, skipped, statusOf, bidVisible, nm,
+  S, STAGES, CC, DOCS, FOLDERS, ATITLE, ADESC, W, apprState, checklist, docs, dl, fdt, fDay, fShort, ft, nextDue, nextStage, ranking, rules, short, skipped, statusOf, bidVisible, nm, canProxy,
 } from '@/engine/engine.js'
 import { advance, commClose, genMatrix, genSSD, requestApproval } from '@/engine/commands.js'
 import { openDlg, run, setUI, useUI } from '@/lib/store'
@@ -40,7 +40,7 @@ function itemAct(pid: string, x: string, k: string) {
 /* ---------- checklist item ---------- */
 function Item({ p, i }: { p: any; i: any }) {
   const pending = i.appr && i.appr.requested && !i.done
-  const canDecide = i.appr && i.appr.requested && i.appr.status !== 'approved' && i.appr.per.some((x: any) => x.name === S.user && (x.state === 'pending' || x.state === 'stale'))
+  const canDecide = i.appr && i.appr.requested && i.appr.status !== 'approved' && (canProxy(p, S.user) || i.appr.per.some((x: any) => x.name === S.user && (x.state === 'pending' || x.state === 'stale')))
   return (
     <div className="flex items-start gap-3 border-t px-4 py-2.5 first:border-t-0">
       <span className={cn('mt-0.5 grid size-5 shrink-0 place-items-center rounded-full', i.done ? 'bg-s3-soft text-s3-ink' : 'bg-muted text-muted-foreground')}>
@@ -137,7 +137,7 @@ function Bids({ p }: { p: any }) {
           <div className="overflow-x-auto"><Table>
             <TableHeader><TableRow><TableHead className="pl-4">Ajánlattevő</TableHead><TableHead>Állapot</TableHead><TableHead>Formai</TableHead><TableHead>Ár (nettó)</TableHead><TableHead>Műszaki</TableHead><TableHead>Rang</TableHead><TableHead /></TableRow></TableHeader>
             <TableBody>{p.bidders.map((b: any) => {
-              const n = docs(p, 'bid', b.id).length
+              const n = docs(p, 'bid', b.id).reduce((m: number, d: any) => Math.max(m, d.ver), 0)
               return (
                 <TableRow key={b.id}>
                   <TableCell className="pl-4"><span className="font-medium">{b.name}</span><div className="text-xs text-muted-foreground">{b.email}{b.isNew && ' · új beszállító'}{b.type === 'Webshop' && ' · webáruház'}</div></TableCell>
@@ -169,18 +169,19 @@ function Docs({ p }: { p: any }) {
     <>
       <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border bg-muted/50 p-3 text-sm"><FileTextIcon className="size-4 shrink-0" /><span className="min-w-0 flex-1">{locked ? 'A dokumentumtár lezárva.' : 'A fájlok a beszerzés SharePoint-mappájába kerülnek. Új feltöltés nem írja felül a korábbi verziót; ha a jóváhagyott dokumentumból új verzió készül, a kapcsolódó jóváhagyások érvénytelenné válnak.'}</span></div>
       {FOLDERS.map((f: string, i: number) => {
-        const n = i + 1, ds = p.docs.filter((d: any) => DOCS[d.key][1] === n), seen: Record<string, boolean> = {}, latest: any[] = []
-        ds.slice().reverse().forEach((d: any) => { const k = d.key + (d.bid || ''); if (!seen[k]) { seen[k] = true; latest.push(d) } })
+        const n = i + 1, ds = p.docs.filter((d: any) => DOCS[d.key][1] === n), top: Record<string, number> = {}
+        ds.forEach((d: any) => { const k = d.key + (d.bid || ''); top[k] = Math.max(top[k] || 0, d.ver) })
+        const latest = ds.filter((d: any) => d.ver === top[d.key + (d.bid || '')])
         const hide = n === 4 && !(bidVisible(p) || p.proc === 'Vészhelyzeti')
         return (
           <Card key={n} title={`${String(n).padStart(2, '0')} – ${f}`} className="!mb-2" right={locked ? <Chip tone="ok"><LockIcon className="size-3" />Lezárt</Chip> : (n === 3 || n === 4 ? undefined : <Button size="sm" variant="outline" onClick={() => openDlg({ type: 'upload', pid: p.id, folder: n })}>Feltöltés</Button>)}>
-            {latest.length ? latest.reverse().map((d: any) => {
-              const cnt = ds.filter((x: any) => x.key === d.key && x.bid === d.bid).length
+            {latest.length ? latest.map((d: any) => {
+              const cnt = d.ver
               return (
                 <div key={d.id} className="flex items-center gap-3 border-t px-4 py-2 first:border-t-0">
                   <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
                   <div className="min-w-0 flex-1"><span className="truncate text-sm font-medium">{hide ? '🔒 zárolt ajánlat (' + (p.bidders.find((b: any) => b.id === d.bid)?.name || '') + ')' : d.url ? <a href={d.url} target="_blank" rel="noreferrer" className="hover:underline">{d.name}</a> : d.name}</span> <Chip className="!px-1.5 !py-0">v{d.ver}</Chip>
-                    <div className="text-xs text-muted-foreground">{dl(d.key)} · {nm(d.by)} · {fdt(d.ts)}{d.size ? ` · ${Math.round(d.size / 1024)} KB` : ''}{d.note ? ` · ${d.note}` : ''}{cnt > 1 ? ` · ${cnt} verzió (mind megőrizve)` : ''}</div></div>
+                    <div className="text-xs text-muted-foreground">{dl(d.key)} · {nm(d.by)} · {fdt(d.ts)}{d.size ? ` · ${Math.round(d.size / 1024)} KB` : ''}{d.note ? ` · ${d.note}` : ''}{cnt > 1 ? ` · ${cnt}. verzió, a korábbiak megőrizve` : ''}</div></div>
                   {!hide && (d.content ? <Button size="xs" variant="outline" onClick={() => openDlg({ type: 'viewdoc', key: d.id, pid: p.id })}>Megtekintés</Button> : d.url ? <Button asChild size="xs" variant="outline"><a href={d.url} target="_blank" rel="noreferrer">Megnyitás</a></Button> : null)}
                 </div>)
             }) : <div className="px-4 pb-3 text-xs text-muted-foreground">Nincs dokumentum.</div>}
@@ -243,7 +244,9 @@ export function ProcSheet() {
               <div className="flex items-center gap-2 text-xs text-muted-foreground"><span className="font-mono">{p.id}</span>·<span>PROC{p.stage} {STAGES[p.stage - 1][1]}</span>{p.test && <TestBadge />}</div>
               <SheetTitle className="mt-0.5 pr-8 text-lg font-semibold leading-snug">{p.subject}</SheetTitle>
               <SheetDescription className="text-sm">{nd?.text}{nd?.date ? ` · határidő: ${fDay(nd.date)}` : ''}</SheetDescription>
-              <div className="mt-2 flex flex-wrap items-center gap-1.5"><Chip>{p.cat}</Chip><TypeChip value={p.value} /><Chip>{procName(p.proc)}</Chip><Chip>{short(p.value)}</Chip>{p.ifs && <Chip tone="bad">IFS-kritikus</Chip>}<span className="ml-auto"><FolderLink p={p} /></span></div>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5"><Chip>{p.cat}</Chip><TypeChip value={p.value} /><Chip>{procName(p.proc)}</Chip><Chip>{short(p.value)}</Chip>{p.ifs && <Chip tone="bad">IFS-kritikus</Chip>}
+                <span className="ml-auto flex items-center gap-3">{!p.closed && <Button size="xs" variant="outline" onClick={() => openDlg({ type: 'editproc', pid: p.id })}><EditIcon />Adatok szerkesztése</Button>}<FolderLink p={p} /></span></div>
+              {p.test && !p.closed && canProxy(p, S.user) && <p className="mt-2 rounded-md bg-s2-soft px-2 py-1 text-xs text-s2-ink">Teszt beszerzés: minden jóváhagyást te is rögzíthetsz a jóváhagyók nevében, és az ajánlatok a határidő előtt is bonthatók – így végig tudod kattintani a folyamatot.</p>}
             </div>
             <Tabs value={u.tab} onValueChange={(v: string) => setUI({ tab: v })} className="flex min-h-0 flex-1 flex-col gap-0">
               <div className="scrollbar-thin shrink-0 overflow-x-auto border-b bg-card px-3" data-tour="sheet-tabs"><TabsList variant="line" className="h-10 w-max gap-0.5 bg-transparent">{tabs.map(([k, l]) => <TabsTrigger key={k} value={k} className="px-2.5 text-[13px]">{l}</TabsTrigger>)}</TabsList></div>

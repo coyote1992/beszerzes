@@ -79,3 +79,4 @@ export declare const unassigned: any
 export declare const validBids: any
 export declare const BUILTIN_ROLES: any
 export declare const isBuiltinRole: any
+export declare const canProxy: any

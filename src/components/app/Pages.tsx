@@ -88,7 +88,7 @@ export function Approvals() {
       </div>
       {u.apprTab === 'wait' ? (wait.length === 0 ? <Panel><Empty>Nincs függő jóváhagyásod. Ha egy beszerzés a te jóváhagyásodra vár, itt jelenik meg.</Empty></Panel> :
         <div className="flex flex-col gap-3">{wait.map((x: any, i: number) => {
-          const p = x.p, a = x.a, others = a.per.filter((y: any) => y.name !== S.user), conflict = (x.key === 'ssd' || x.key === 'ss') && S.user === p.requester
+          const p = x.p, a = x.a, others = a.per.filter((y: any) => y.name !== S.user), conflict = !p.test && (x.key === 'ssd' || x.key === 'ss') && S.user === p.requester
           return (
             <Panel key={p.id + x.key} i={i + 1} className="flex flex-wrap items-center justify-between gap-4 p-4">
               <div className="min-w-72 flex-1">

@@ -41,3 +41,4 @@ export declare const subfolderName: any
 export declare const tcoCalc: any
 export declare const toggleTask: any
 export declare const uploadDoc: any
+export declare const editProc: any

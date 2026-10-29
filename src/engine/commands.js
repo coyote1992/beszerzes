@@ -44,20 +44,23 @@ export function ssdHTML(p) {
 }
 
 /* ---------- documents ---------- */
+/** Adds one version of a document. A version may consist of several files (o.files); they share the version number. */
 export function addDoc(p, o) {
   const prev = docLatest(p, o.key, o.bid), ver = (prev ? prev.ver : 0) + 1
   const inv = prev ? Object.keys(p.appr).filter((k) => boundKey(p, k) === o.key && p.appr[k].decisions.some((d) => d.ver === prev.ver)) : []
-  const d = { id: uid(), key: o.key, ver, name: o.name, size: o.size || 0, url: o.url || '', path: docPath(p, o.key), by: S.user, ts: stamp(), bid: o.bid, note: o.note || '', content: o.content || '' }
-  p.docs.push(d)
-  log(p.id, 'Dokumentum', (o.title || dl(o.key)) + (ver > 1 ? ' – új verzió' : ' feltöltve'), `${d.name} · v${ver}`)
+  const files = o.files || [{ name: o.name, webUrl: o.url, size: o.size }]
+  const ts = stamp()
+  const added = files.map((f) => ({ id: uid(), key: o.key, ver, name: f.name, size: f.size || 0, url: f.webUrl || '', path: docPath(p, o.key), by: S.user, ts, bid: o.bid, note: o.note || '', content: o.content || '' }))
+  p.docs.push(...added)
+  log(p.id, 'Dokumentum', (o.title || dl(o.key)) + (ver > 1 ? ' – új verzió' : ' feltöltve'), `${added.map((d) => d.name).join(', ')} · v${ver}`)
   inv.forEach((k) => log(p.id, 'Jóváhagyás', 'Korábbi jóváhagyások érvénytelenek', `${ATITLE[k]} · új dokumentumverzió (v${ver}) – a döntéseket meg kell ismételni`))
-  return d
+  return added[0]
 }
-/** Registers a file that has already been uploaded to SharePoint. */
-export function uploadDoc(pid, { key, bid, file, note }) {
+/** Registers files that have already been uploaded to SharePoint, as one new version of the document. */
+export function uploadDoc(pid, { key, bid, files, note }) {
   const p = P(pid)
-  addDoc(p, { key, bid, name: file.name, url: file.webUrl, size: file.size, note })
-  toast('Dokumentum feltöltve a SharePointba', 'ok')
+  addDoc(p, { key, bid, files, note })
+  toast(files.length > 1 ? `${files.length} fájl feltöltve a SharePointba` : 'Dokumentum feltöltve a SharePointba', 'ok')
 }
 export function genMatrix(pid) { const p = P(pid); addDoc(p, { key: 'matrix', name: 'Kiertekelesi_matrix_' + asc(p.id), content: matrixHTML(p) }); toast('Kiértékelési mátrix elkészült', 'ok') }
 export function genSSD(pid) { const p = P(pid); const d = addDoc(p, { key: 'ssd', name: 'SSD_' + asc(p.id) + '_tervezet', content: ssdHTML(p) }); toast('SSD v' + d.ver + ' elkészült', 'ok') }
@@ -78,6 +81,27 @@ export function createProc(v) {
   if (v.proc === 'Vészhelyzeti') addDoc(p, { key: 'vhReason', name: 'Veszhelyzeti_indoklas_' + asc(p.id), content: `<h4>Vészhelyzeti indoklás – ${esc(p.id)}</h4><p>${esc(v.reason).replace(/\n/g, '<br>')}</p><p>Rögzítette: ${esc(nm(S.user))}, ${p.created}</p>` })
   toast(`${p.id} létrehozva – besorolás: ${t}`, 'ok')
   return { id: p.id }
+}
+/** Edits the basic data of a procurement. The ID and the folder stay; rules (tier, approvers, required steps) follow the new data. */
+export function editProc(pid, v) {
+  const p = P(pid)
+  if (p.closed) return 'Lezárt beszerzés nem módosítható.'
+  const val = num(v.value)
+  if (!String(v.subject || '').trim()) return 'Adja meg a beszerzés tárgyát.'
+  if (!(val > 0)) return 'Adja meg a becsült nettó értéket.'
+  if (!v.requester) return 'Válassza ki az igénylőt.'
+  if (v.proc !== p.proc && p.stage !== 1) return 'Az eljárás típusa csak az igény szakaszában (PROC1) módosítható.'
+  const next = { subject: String(v.subject).trim(), org: v.org, cc: v.cc, value: val, cat: v.cat, proc: v.proc, desired: v.desired, requester: v.requester, owner: v.owner, ifs: !!v.ifs, maint: v.cat === 'CAPEX' && !!v.maint, it: !!v.it, prepay: !!v.prepay }
+  const L = { subject: 'Tárgy', org: 'Szervezet', cc: 'Költséghely', value: 'Érték', cat: 'Kategória', proc: 'Eljárás', desired: 'Kívánt teljesítés', requester: 'Igénylő', owner: 'Felelős beszerző', ifs: 'IFS-kritikus', maint: 'Fenntartó beruházás', it: 'IT / adatkezelés', prepay: 'Előleg' }
+  const show = (k, x) => (k === 'value' ? ft(x) : k === 'requester' || k === 'owner' ? nm(x) : typeof x === 'boolean' ? (x ? 'igen' : 'nem') : k === 'proc' ? procLabel(x) : String(x ?? '–'))
+  const changes = Object.keys(next).filter((k) => next[k] !== p[k])
+  if (!changes.length) return 'x'
+  const t0 = typeOf(p.value), t1 = typeOf(val)
+  const detail = changes.map((k) => `${L[k]}: ${show(k, p[k])} → ${show(k, next[k])}`).join(' · ') + (t0 !== t1 ? ` · besorolás: ${t0} → ${t1}` : '')
+  if (next.proc === 'Vészhelyzeti' && p.proc !== 'Vészhelyzeti') p.vhDate = S.today
+  Object.assign(p, next)
+  log(p.id, 'Módosítás', 'Beszerzés adatai módosítva', detail)
+  toast(t0 !== t1 ? `Mentve – a besorolás ${t1} lett, a kötelező lépések és jóváhagyók ehhez igazodtak` : 'Adatok mentve', 'ok')
 }
 export function advance(pid) {
   const p = P(pid), miss = checklist(p).filter((i) => !i.done)
@@ -168,21 +192,21 @@ export function removeBidder(pid, bid) {
 }
 export function recvBid(pid, bid, v) {
   const p = P(pid), b = p.bidders.find((x) => x.id === bid), vh = p.proc === 'Vészhelyzeti', late = p.bidDeadline && S.today > p.bidDeadline
-  if (!v.file) return 'Csatolja az ajánlat fájlját.'
+  if (!v.files?.length) return 'Csatolja az ajánlat fájljait.'
   const prev = docLatest(p, 'bid', b.id), ver = (prev ? prev.ver : 0) + 1
   b.status = 'beérkezett'; b.recv = stamp(); b.sender = v.sender
   b.msgId = `<${uid().slice(1)}@${(v.sender || '').split('@')[1] || 'ajanlat'}>`
   b.late = !!late; b.formal = late ? false : vh ? true : null
   if (vh) b.price = num(v.price) || p.value
-  addDoc(p, { key: 'bid', bid: b.id, name: v.file.name, url: v.file.webUrl, size: v.file.size, note: v.note, title: 'Ajánlat beérkezett – ' + b.name })
-  p.mail.push({ dir: 'in', ts: b.recv, from: v.sender, to: 'arajanlat@fonteviva.hu', subj: 'Ajánlat – ' + p.subject + ' (' + p.id + ')', body: '', att: [v.file.name], bid: b.id })
+  addDoc(p, { key: 'bid', bid: b.id, files: v.files, note: v.note, title: 'Ajánlat beérkezett – ' + b.name })
+  p.mail.push({ dir: 'in', ts: b.recv, from: v.sender, to: 'arajanlat@fonteviva.hu', subj: 'Ajánlat – ' + p.subject + ' (' + p.id + ')', body: '', att: v.files.map((f) => f.name), bid: b.id })
   log(p.id, 'Ajánlat', 'Ajánlat beérkezett', `${b.name} · v${ver}${late ? ' · KÉSVE' : ''}`)
   toast('Ajánlat rögzítve – tartalma zárolt a bontásig', 'ok')
 }
 export function declineBid(pid, bid, v) {
   const p = P(pid), b = p.bidders.find((x) => x.id === bid)
   b.status = 'lemondó'; b.recv = stamp(); b.note = v.note
-  if (v.file) addDoc(p, { key: 'bid', bid: b.id, name: v.file.name, url: v.file.webUrl, size: v.file.size, note: v.note, title: 'Lemondó nyilatkozat – ' + b.name })
+  if (v.files?.length) addDoc(p, { key: 'bid', bid: b.id, files: v.files, note: v.note, title: 'Lemondó nyilatkozat – ' + b.name })
   log(p.id, 'Ajánlat', 'Lemondó nyilatkozat rögzítve', `${b.name}${v.note ? ' · ' + v.note : ''}`)
 }
 export function sendTender(pid, v) {
