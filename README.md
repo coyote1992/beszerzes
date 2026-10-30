@@ -48,9 +48,17 @@ Gyakorló beszerzések: `Dokumentumok / Teszt beszerzések / …` – ezek a bes
 
 Az eseményeket a **szerver** írja és láncolja (SHA-256, előző hash + sorszám + időpont + felhasználó + tartalom). A lánc feje ETag-gel védett, így párhuzamos mentésnél sem szakad meg. „Lánc ellenőrzése” = `/api/audit/verify`.
 
+### E-mail értesítések
+
+Ha valaki új feladatot kap, vagy egy beszerzés **következő lépése** az ő jóváhagyása, rövid e-mailt kap a teendővel és egy linkkel, amely közvetlenül a beszerzést (vagy a Feladatok oldalt) nyitja meg. Feladó: `noreply@fonteviva.hu` (felülírható a `MAIL_SENDER` változóval), Microsoft Graph `sendMail`.
+- Saját műveletéről senki nem kap levelet; ugyanarról a teendőről csak egyszer megy levél (új dokumentumverzió vagy új jóváhagyási kör újra értesít).
+- Teszt beszerzésnél minden értesítést a teszt létrehozója kap, „[TESZT]” jelöléssel.
+- Csak aktív munkatársnak megy levél; a levél tartalmát a szerver állítja össze.
+- Feltétel: az alkalmazásnak Exchange-ben (RBAC for Applications) `Mail.Send` joga legyen a noreply@ postafiókra. Ellenőrzés: Beállítások → „Teszt e-mail küldése magamnak”.
+
 ## Beállítás (egyszeri)
 
-Vercel környezeti változók (Production): `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `SP_SITE_ID`; opcionálisan `SESSION_SECRET` (különben a kliens titokból származik) és `APP_ORIGIN` (alapértelmezés: `https://beszerzes.vercel.app`).
+Vercel környezeti változók (Production): `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `SP_SITE_ID`; opcionálisan `SESSION_SECRET` (különben a kliens titokból származik) és `APP_ORIGIN` (alapértelmezés: `https://beszerzes.vercel.app`), `MAIL_SENDER` (alapértelmezés: `noreply@fonteviva.hu`).
 
 Entra ID alkalmazásregisztráció:
 1. **Authentication → Add a platform → Web**, Redirect URI: `https://beszerzes.vercel.app/api/auth/callback`

@@ -1,11 +1,12 @@
 import { Component, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { useEngine, useUI, rerender, setUI, ui } from '@/lib/store'
+import { useEngine, useUI, rerender, setUI, ui, type View } from '@/lib/store'
+import { S } from '@/engine/engine.js'
 import { AuthError, flush, hasPending, loadAll, setAuthLostHandler } from '@/lib/sync'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
-import { Shell } from '@/components/app/Shell'
+import { Shell, TITLES } from '@/components/app/Shell'
 import { Dashboard } from '@/components/app/Dashboard'
 import { Approvals, Audit, Policy, Procurements, Settings, Tasks } from '@/components/app/Pages'
 import { ProcSheet } from '@/components/app/ProcSheet'
@@ -36,6 +37,15 @@ class Boundary extends Component<{ children: ReactNode }, { err: Error | null }>
       </Splash>
     )
   }
+}
+
+/** Links in notification e-mails: ?p=<procurement id>&tab=<tab> or ?view=<page>. */
+function openFromLink() {
+  const q = new URLSearchParams(location.search)
+  const pid = q.get('p'), tab = q.get('tab'), view = q.get('view')
+  if (pid && S.procs.some((x: any) => x.id === pid)) setUI({ view: 'procs', open: pid, tab: tab || 'ov' })
+  else if (view && view in TITLES) setUI({ view: view as View })
+  if (pid || view) history.replaceState(null, '', location.pathname)
 }
 
 const login = () => location.replace('/api/auth/login?returnTo=' + encodeURIComponent(location.pathname + location.search))
@@ -76,7 +86,7 @@ export default function App() {
   const boot = useCallback(async () => {
     setPhase('loading'); setSlow(false)
     const t = setTimeout(() => setSlow(true), 4000)
-    try { await loadAll(); lastLoad.current = Date.now(); setPhase('ready') }
+    try { await loadAll(); lastLoad.current = Date.now(); openFromLink(); setPhase('ready') }
     catch (e) { if (e instanceof AuthError) return login(); report(e, 'load'); setErr((e as Error).message); setPhase('error') }
     finally { clearTimeout(t) }
   }, [])

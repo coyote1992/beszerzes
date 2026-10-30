@@ -1,5 +1,6 @@
 import { appendAudit, type AuditIn } from './_lib/audit.js'
 import { batch, drive, encPath, graph } from './_lib/graph.js'
+import { render, sendMails, type Notice } from './_lib/mail.js'
 import { access } from './_lib/people.js'
 import { checkPath, createProcFolders, itemsPath, lists, minimalFields, safeName, toFields, type ListKey } from './_lib/schema.js'
 import { json, sessionFromRequest, unauthorized } from './_lib/session.js'
@@ -10,7 +11,7 @@ const ENTITY: ListKey[] = ['proc', 'bidder', 'appr', 'task', 'doc', 'person', 's
 export async function POST(request: Request) {
   const me = sessionFromRequest(request)
   if (!me) return unauthorized()
-  let body: { ops?: Op[]; audit?: AuditIn[] }
+  let body: { ops?: Op[]; audit?: AuditIn[]; notify?: Notice[] }
   try { body = await request.json() } catch { return json({ error: 'bad_json' }, 400) }
   const ops = (body.ops || []).filter((o) => ENTITY.includes(o.t) && typeof o.key === 'string' && o.key)
   const errors: { k: string; message: string }[] = []
@@ -74,7 +75,10 @@ export async function POST(request: Request) {
     })
 
     const audit = await appendAudit(me, (body.audit || []).slice(0, 200))
-    return json({ sp, patch, errors, audit })
+    // Notification e-mails: only to active colleagues, at most 20 per request, content rendered here.
+    const mails = (body.notify || []).slice(0, 20).map((n) => render(n, acc.people)).filter((m) => m !== null)
+    const mail = await sendMails(mails)
+    return json({ sp, patch, errors, audit, mail: { sent: mail.sent, failed: mail.failed.length } })
   } catch (e) {
     console.error(e)
     return json({ error: 'server', message: (e as Error).message, sp, patch, errors }, 500)

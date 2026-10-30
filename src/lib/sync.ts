@@ -2,6 +2,7 @@
 // The policy engine mutates S in place; after every command we diff entities against the last saved snapshot.
 import { S, setS, emptyState, todayLocal, DEFAULT_CC, ROLE_LABEL, ATITLE, STAGES, nm, typeOf, statusOf, nextDue, dl, log } from '@/engine/engine.js'
 import { report } from '@/lib/report'
+import { dueNotices, type Notice } from '@/lib/notices'
 
 type Ent = { t: string; key: string; obj: any; data: any; view: Record<string, unknown> }
 type SyncState = 'idle' | 'saving' | 'error'
@@ -61,9 +62,22 @@ function entities(): Ent[] {
   return out
 }
 
+/* ---------- e-mail notifications ---------- */
+let noticeBase = new Set<string>()
+let outbox: Notice[] = []
+const safeDue = () => { try { return dueNotices() } catch (e) { report(e, 'notices'); return new Map<string, Notice>() } }
+/** After loading: whatever is due now was caused by someone else (or earlier) and is not sent again. */
+const rebaseNotices = () => { noticeBase = new Set(safeDue().keys()) }
+/** After a local change: newly due notices go to the outbox. Nobody is e-mailed about their own action, except on TEST procurements. */
+function collectNotices() {
+  const now = safeDue()
+  for (const [k, n] of now) if (!noticeBase.has(k) && (n.test || n.to !== S.user)) outbox.push(n)
+  noticeBase = new Set(now.keys())
+}
+
 function pendingCount() {
   if (!S) return 0
-  let n = S.audit.filter((e: any) => e._new).length
+  let n = S.audit.filter((e: any) => e._new).length + outbox.length
   for (const e of entities()) if (snap.get(`${e.t}:${e.key}`) !== stable(e.data)) n++
   return n
 }
@@ -120,6 +134,7 @@ export async function loadAll(canApply?: () => boolean): Promise<boolean> {
   if (canApply && !canApply()) return false
   setS(s)
   rememberAll()
+  rebaseNotices()
   if (moved.length) {
     for (const [id, from, to] of moved) { snap.delete(`proc:${id}`); log(id, 'Státusz', 'Szakasz áthelyezve', `PROC${from} → PROC${to} (a Teljesítés szakasz megszűnt)`) }
     scheduleSync(1500)
@@ -180,14 +195,16 @@ async function syncOnce() {
   }
   for (const [k, sp] of spOf) if (!seen.has(k) && k.startsWith('bidder:')) ops.push({ t: 'bidder', key: k.slice(7), sp, del: true })
   const newAudit = S.audit.filter((e: any) => e._new && !e._sending)
-  if (!ops.length && !newAudit.length) { if (state !== 'idle') { state = 'idle'; emit() } return }
+  collectNotices()
+  const notify = outbox.slice()
+  if (!ops.length && !newAudit.length && !notify.length) { if (state !== 'idle') { state = 'idle'; emit() } return }
 
   newAudit.forEach((e: any) => (e._sending = true))
   state = 'saving'; emit()
   try {
     const res = await fetch('/api/sync', {
       method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ops, audit: newAudit.map((e: any) => ({ proc: e.proc, type: e.type, title: e.title, detail: e.detail })) }),
+      body: JSON.stringify({ ops, audit: newAudit.map((e: any) => ({ proc: e.proc, type: e.type, title: e.title, detail: e.detail })), notify: notify.map(({ key: _k, ...n }) => n) }),
     })
     if (res.status === 401) { newAudit.forEach((e: any) => delete e._sending); state = 'error'; lastError = 'A munkamenet lejárt.'; emit(); onAuthLost(); return }
     const body = await res.json().catch(() => ({}))
@@ -205,6 +222,7 @@ async function syncOnce() {
       snap.set(k, patch ? stable({ ...JSON.parse(m.json), ...patch }) : m.json)
       failures.delete(k)
     }
+    if (res.ok) outbox = outbox.filter((n) => !notify.includes(n))
     if (Array.isArray(body.audit) && res.ok) newAudit.forEach((e: any, i: number) => { Object.assign(e, body.audit[i] || {}); delete e._new; delete e._sending })
     else newAudit.forEach((e: any) => delete e._sending)
     if (!res.ok || errKeys.size) {

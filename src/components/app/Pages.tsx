@@ -293,6 +293,26 @@ export function Settings() {
               <TableCell className="w-72 pr-4">{admin ? <Sel size="sm" value={v} onChange={(x) => setBand(code, i, x)} options={refOpts()} /> : <span className="text-sm">{b[1] === null ? 'Nincs jóváhagyás' : nm(resolveRef(b[1], code, i))}</span>}</TableCell>
             </TableRow>) }))}</TableBody></Table>
       </Panel>
+      {admin && <MailPanel />}
     </>
+  )
+}
+
+function MailPanel() {
+  const [st, setSt] = useState<{ busy?: boolean; ok?: boolean; msg?: string }>({})
+  const send = async () => {
+    setSt({ busy: true })
+    try {
+      const r = await fetch('/api/mail/test', { method: 'POST', credentials: 'same-origin' }).then((x) => x.json())
+      setSt(r.ok ? { ok: true, msg: `Elküldve a(z) ${r.to} címre (feladó: ${r.from}). Nézd meg a postafiókodat.` } : { ok: false, msg: r.message || r.error || 'Sikertelen küldés.' })
+    } catch (e) { setSt({ ok: false, msg: (e as Error).message }) }
+  }
+  return (
+    <Panel i={4} className="mt-4"><PanelHead title="E-mail értesítések" sub="Új feladatnál, és amikor egy beszerzés következő lépése valakinek a jóváhagyása, az illető rövid e-mailt kap a noreply@fonteviva.hu címről, linkkel. TESZT beszerzésnél az értesítést a teszt létrehozója kapja." />
+      <div className="flex flex-wrap items-center gap-3 px-4 pb-4">
+        <Button size="sm" variant="outline" disabled={st.busy} onClick={() => void send()}>{st.busy ? 'Küldés…' : 'Teszt e-mail küldése magamnak'}</Button>
+        {st.msg && <span className={cn('text-sm', st.ok ? 'text-s3-ink' : 'text-destructive')}>{st.msg}</span>}
+      </div>
+    </Panel>
   )
 }
