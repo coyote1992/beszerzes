@@ -19,6 +19,8 @@ npm run typecheck:api  # a szerveroldali függvények típusellenőrzése
 | Szinkron | `src/lib/sync.ts` | Minden módosítást pár száz ms után elküld (`/api/sync`); 90 mp-enként frissít, ha nincs nyitott ablak vagy mentetlen adat |
 | Szerver | `api/` (Vercel Functions) | Bejelentkezés, SharePoint-írás/olvasás Microsoft Graph-on keresztül, auditlánc |
 
+A Vercel Hobby csomag legfeljebb **12 függvényt** enged egy telepítésben (most 11). Új végpontot lehetőleg egy meglévő, `[paraméter]`-es fájlba kell tenni (mint `api/files/[action].ts`, `api/login/[step].ts`); a közös kód az `api/_lib` mappában van, az nem számít függvénynek.
+
 ### Bejelentkezés
 
 - Kijelentkezett látogató a bejelentkezési képernyőt látja: **„Bejelentkezés Microsoft-fiókkal”** (fő gomb), alatta **„Külső partner vagy? Belépés e-mailben kapott kóddal”**.
