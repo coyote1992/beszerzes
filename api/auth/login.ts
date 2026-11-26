@@ -1,12 +1,11 @@
-import { OAUTH_COOKIE, appOrigin, cookie, randomId, sign } from '../_lib/session.js'
+import { OAUTH_COOKIE, appOrigin, cookie, randomId, safeReturn, sign } from '../_lib/session.js'
 
 export async function GET(request: Request) {
   const url = new URL(request.url)
   const origin = appOrigin()
   // Always sign in on the canonical domain, so the redirect URI and cookies match.
   if (url.origin !== origin) return Response.redirect(`${origin}/api/auth/login${url.search}`, 302)
-  const rt = url.searchParams.get('returnTo') || '/'
-  const returnTo = rt.startsWith('/') && !rt.startsWith('//') ? rt : '/'
+  const returnTo = safeReturn(url.searchParams.get('returnTo'))
   const state = randomId(), nonce = randomId()
   const auth = new URL(`https://login.microsoftonline.com/${process.env.MS_TENANT_ID}/oauth2/v2.0/authorize`)
   auth.search = new URLSearchParams({

@@ -4,7 +4,8 @@ export const SESSION_COOKIE = 'bsz_session'
 export const OAUTH_COOKIE = 'bsz_oauth'
 export const SESSION_HOURS = 10
 
-export type SessionUser = { email: string; name: string; oid: string }
+/** `method: 'code'` = signed in with an e-mail code (outside partner on the Login list); otherwise Microsoft. */
+export type SessionUser = { email: string; name: string; oid: string; method?: 'code' }
 
 function key(): Buffer {
   const explicit = process.env.SESSION_SECRET
@@ -36,6 +37,9 @@ export function unsign<T = any>(token: string | undefined): T | null {
   }
 }
 
+/** HMAC (hex) keyed with the session key; used for sign-in code hashes and their storage keys. */
+export const keyedHash = (value: string) => createHmac('sha256', key()).update(value).digest('hex')
+
 export const randomId = (n = 24) => randomBytes(n).toString('base64url')
 
 export function cookies(req: Request): Record<string, string> {
@@ -52,18 +56,27 @@ export function cookie(name: string, value: string, maxAgeSec: number): string {
 }
 
 export function sessionFromRequest(req: Request): SessionUser | null {
-  const p = unsign<{ e: string; n: string; o: string; x: number }>(cookies(req)[SESSION_COOKIE])
-  return p ? { email: p.e, name: p.n, oid: p.o } : null
+  const p = unsign<{ e: string; n: string; o: string; m?: 'code'; x: number }>(cookies(req)[SESSION_COOKIE])
+  return p ? { email: p.e, name: p.n, oid: p.o, ...(p.m === 'code' ? { method: 'code' as const } : {}) } : null
 }
 
 export function newSessionCookie(u: SessionUser): string {
-  return cookie(SESSION_COOKIE, sign({ e: u.email, n: u.name, o: u.oid, x: Date.now() + SESSION_HOURS * 3600_000 }), SESSION_HOURS * 3600)
+  return cookie(SESSION_COOKIE, sign({ e: u.email, n: u.name, o: u.oid, ...(u.method ? { m: u.method } : {}), x: Date.now() + SESSION_HOURS * 3600_000 }), SESSION_HOURS * 3600)
 }
 
 export const json = (data: unknown, status = 200, extra: Record<string, string> = {}) =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...extra } })
 
 export const unauthorized = () => json({ error: 'unauthorized', login: '/api/auth/login' }, 401)
+
+/** Same-site path for after sign-in; anything else (e.g. `//evil.example`) becomes "/". */
+export const safeReturn = (v: unknown) => (typeof v === 'string' && v.startsWith('/') && !v.startsWith('//') && !v.startsWith('/\\') ? v : '/')
+
+/** Only the app's own pages may call the sign-in endpoints. Browsers always send Origin on POST, so a request without one is not cross-site. */
+export function sameOrigin(req: Request): boolean {
+  const origin = req.headers.get('origin')
+  return !origin || origin === new URL(req.url).origin || origin === appOrigin()
+}
 
 export const appOrigin = () => (process.env.APP_ORIGIN || 'https://beszerzes.vercel.app').replace(/\/$/, '')
 

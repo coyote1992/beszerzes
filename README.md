@@ -21,7 +21,9 @@ npm run typecheck:api  # a szerveroldali függvények típusellenőrzése
 
 ### Bejelentkezés
 
-- `/api/auth/login` → Microsoft-fiókválasztó (`prompt=select_account`), csak a Fonte Viva tenant fiókjai (vendégfiók nem).
+- Kijelentkezett látogató a bejelentkezési képernyőt látja: **„Bejelentkezés Microsoft-fiókkal”** (fő gomb), alatta **„Külső partner vagy? Belépés e-mailben kapott kóddal”**.
+- `/api/auth/login` → Microsoft-fiókválasztó (`prompt=select_account`), a Fonte Viva tenant fiókjai; vendégfiók (B2B) csak akkor, ha a Munkatársak között aktívként szerepel.
+- **E-mail-kódos belépés külső partnereknek:** a cím a Beszerzés webhely **Login** listáján (Title = e-mail, opcionális „Név” oszlop) legyen. A 6 jegyű kód a `noreply@` címről érkezik, 10 percig érvényes, egyszer használható, 5 hibás próbálkozás után zárol. Kódkérés: címenként 5 / 15 perc, hálózati címenként 20 / óra. A válasz listán szereplő és nem szereplő címre ugyanaz. `@fonteviva.hu` cím itt nem használható. Ha a lista nem olvasható, e-mailes belépés nincs. A listáról törölt partner munkamenete legfeljebb ~5 percen belül megszűnik. A kódok csak kulcsolt hash-ként, az Upstash Redis tárban (`KV_REST_API_URL`, `KV_REST_API_TOKEN`) vannak. Az e-mail-kóddal belépett partner mindent lát és szerkeszthet, amit egy kolléga; a dokumentumokat az alkalmazáson keresztül nyitja meg (`/api/files/download`), a SharePoint-mappa linkje rejtve van. Lista neve felülírható: `SP_LOGIN_LIST`.
 - A munkamenet egy aláírt, HttpOnly süti, **10 óráig** érvényes; utána újra be kell jelentkezni.
 - Az első bejelentkező automatikusan **adminisztrátor** lesz; mindenki más az első belépéskor felkerül a Munkatársak listára. Inaktívra állított munkatárs nem léphet be.
 
@@ -58,7 +60,7 @@ Ha valaki új feladatot kap, vagy egy beszerzés **következő lépése** az ő 
 
 ## Beállítás (egyszeri)
 
-Vercel környezeti változók (Production): `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `SP_SITE_ID`; opcionálisan `SESSION_SECRET` (különben a kliens titokból származik) és `APP_ORIGIN` (alapértelmezés: `https://beszerzes.vercel.app`), `MAIL_SENDER` (alapértelmezés: `noreply@fonteviva.hu`).
+Vercel környezeti változók (Production): `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `SP_SITE_ID`; opcionálisan `SESSION_SECRET` (különben a kliens titokból származik) és `APP_ORIGIN` (alapértelmezés: `https://beszerzes.vercel.app`), `MAIL_SENDER` (alapértelmezés: `noreply@fonteviva.hu`), `SP_LOGIN_LIST` (alapértelmezés: `Login`). E-mail-kódos belépéshez: Vercel → Storage → Upstash for Redis a projekthez kötve (`KV_REST_API_URL`, `KV_REST_API_TOKEN`).
 
 Entra ID alkalmazásregisztráció:
 1. **Authentication → Add a platform → Web**, Redirect URI: `https://beszerzes.vercel.app/api/auth/callback`

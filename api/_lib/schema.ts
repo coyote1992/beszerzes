@@ -42,7 +42,7 @@ export const ROOT_FOLDER = 'Beszerzések'
 export const TEST_FOLDER = 'Teszt beszerzések'
 
 /** "Auditnapló – teszt" == "auditnaplo-teszt" == "Auditnaplo teszt" */
-const norm = (s: string) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '')
+export const norm = (s: string) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '')
 const KIND_HU: Record<Kind, string> = { text: 'Egysoros szöveg', note: 'Többsoros szöveg', number: 'Szám', date: 'Dátum', datetime: 'Dátum', bool: 'Igen/Nem' }
 
 function colBody(col: Col) {

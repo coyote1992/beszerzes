@@ -1,15 +1,15 @@
 import { appendAudit, type AuditIn } from './_lib/audit.js'
 import { batch, drive, encPath, graph } from './_lib/graph.js'
 import { render, sendMails, type Notice } from './_lib/mail.js'
-import { access } from './_lib/people.js'
+import { access, currentUser } from './_lib/people.js'
 import { checkPath, createProcFolders, itemsPath, lists, minimalFields, safeName, toFields, type ListKey } from './_lib/schema.js'
-import { json, sessionFromRequest, unauthorized } from './_lib/session.js'
+import { json, unauthorized } from './_lib/session.js'
 
 type Op = { t: ListKey; key: string; sp?: string; data?: any; view?: Record<string, unknown>; del?: boolean }
 const ENTITY: ListKey[] = ['proc', 'bidder', 'appr', 'task', 'doc', 'person', 'setting']
 
 export async function POST(request: Request) {
-  const me = sessionFromRequest(request)
+  const me = await currentUser(request)
   if (!me) return unauthorized()
   let body: { ops?: Op[]; audit?: AuditIn[]; notify?: Notice[] }
   try { body = await request.json() } catch { return json({ error: 'bad_json' }, 400) }

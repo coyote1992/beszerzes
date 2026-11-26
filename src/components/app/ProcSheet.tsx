@@ -7,6 +7,7 @@ import { advance, commClose, genMatrix, genSSD, requestApproval } from '@/engine
 import { openDlg, run, setUI, useUI } from '@/lib/store'
 import { Chip, People, Person, STAGE_BG, TypeChip, fixName, procName, type Tone } from '@/lib/ui-helpers'
 import { cn } from '@/lib/utils'
+import { docHref } from '@/lib/files'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -180,9 +181,9 @@ function Docs({ p }: { p: any }) {
               return (
                 <div key={d.id} className="flex items-center gap-3 border-t px-4 py-2 first:border-t-0">
                   <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
-                  <div className="min-w-0 flex-1"><span className="truncate text-sm font-medium">{hide ? '🔒 zárolt ajánlat (' + (p.bidders.find((b: any) => b.id === d.bid)?.name || '') + ')' : d.url ? <a href={d.url} target="_blank" rel="noreferrer" className="hover:underline">{d.name}</a> : d.name}</span> <Chip className="!px-1.5 !py-0">v{d.ver}</Chip>
+                  <div className="min-w-0 flex-1"><span className="truncate text-sm font-medium">{hide ? '🔒 zárolt ajánlat (' + (p.bidders.find((b: any) => b.id === d.bid)?.name || '') + ')' : docHref(d) ? <a href={docHref(d)} target="_blank" rel="noreferrer" className="hover:underline">{d.name}</a> : d.name}</span> <Chip className="!px-1.5 !py-0">v{d.ver}</Chip>
                     <div className="text-xs text-muted-foreground">{dl(d.key)} · {nm(d.by)} · {fdt(d.ts)}{d.size ? ` · ${Math.round(d.size / 1024)} KB` : ''}{d.note ? ` · ${d.note}` : ''}{cnt > 1 ? ` · ${cnt}. verzió, a korábbiak megőrizve` : ''}</div></div>
-                  {!hide && (d.content ? <Button size="xs" variant="outline" onClick={() => openDlg({ type: 'viewdoc', key: d.id, pid: p.id })}>Megtekintés</Button> : d.url ? <Button asChild size="xs" variant="outline"><a href={d.url} target="_blank" rel="noreferrer">Megnyitás</a></Button> : null)}
+                  {!hide && (d.content ? <Button size="xs" variant="outline" onClick={() => openDlg({ type: 'viewdoc', key: d.id, pid: p.id })}>Megtekintés</Button> : docHref(d) ? <Button asChild size="xs" variant="outline"><a href={docHref(d)} target="_blank" rel="noreferrer">Megnyitás</a></Button> : null)}
                 </div>)
             }) : <div className="px-4 pb-3 text-xs text-muted-foreground">Nincs dokumentum.</div>}
           </Card>)
@@ -223,6 +224,7 @@ function Mail({ p }: { p: any }) {
 
 /* ---------- sheet ---------- */
 function FolderLink({ p }: { p: any }) {
+  if (S.me?.method === 'code') return null // partners signed in with an e-mail code have no SharePoint access
   if (p.folderUrl) return <a href={p.folderUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-medium hover:underline"><FolderOpenIcon className="size-4" />SharePoint-mappa ↗</a>
   return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground"><FolderOpenIcon className="size-4" />Mappa létrehozása…</span>
 }

@@ -14,6 +14,7 @@ import { Dialogs } from '@/components/app/Dialogs'
 import { Tour } from '@/components/app/Tour'
 import { DecisionTree } from '@/components/app/Tree'
 import { report } from '@/lib/report'
+import { SignIn, Splash, msLogin } from '@/components/app/SignIn'
 
 const REFRESH_MS = 90_000
 if (typeof window !== 'undefined') {
@@ -48,19 +49,6 @@ function openFromLink() {
   if (pid || view) history.replaceState(null, '', location.pathname)
 }
 
-const login = () => location.replace('/api/auth/login?returnTo=' + encodeURIComponent(location.pathname + location.search))
-
-function Splash({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="grid min-h-screen place-items-center p-6">
-      <div className="flex max-w-sm flex-col items-center gap-3 text-center">
-        <div className="grid size-9 place-items-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">F</div>
-        {children}
-      </div>
-    </div>
-  )
-}
-
 function SessionExpired() {
   const u = useUI()
   if (!u.sessionExpired) return null
@@ -69,7 +57,8 @@ function SessionExpired() {
       <div className="pop w-full max-w-sm rounded-lg border bg-popover p-5 text-popover-foreground shadow-lg">
         <h3 className="text-base font-semibold">A bejelentkezés lejárt</h3>
         <p className="mt-1 text-sm text-muted-foreground">A munkamenet 10 óra után lejár. Jelentkezz be újra a folytatáshoz – a még el nem mentett utolsó módosítás elveszhet.</p>
-        <div className="mt-4 flex justify-end"><Button onClick={login}>Bejelentkezés</Button></div>
+        {/* E-mail-code partners get a new code on the sign-in screen. */}
+        <div className="mt-4 flex justify-end"><Button onClick={() => (S.me?.method === 'code' ? location.reload() : msLogin())}>Bejelentkezés</Button></div>
       </div>
     </div>
   )
@@ -78,7 +67,7 @@ function SessionExpired() {
 export default function App() {
   useEngine()
   const u = useUI()
-  const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [phase, setPhase] = useState<'loading' | 'signin' | 'ready' | 'error'>('loading')
   const [err, setErr] = useState('')
   const [slow, setSlow] = useState(false)
   const lastLoad = useRef(0)
@@ -87,7 +76,7 @@ export default function App() {
     setPhase('loading'); setSlow(false)
     const t = setTimeout(() => setSlow(true), 4000)
     try { await loadAll(); lastLoad.current = Date.now(); openFromLink(); setPhase('ready') }
-    catch (e) { if (e instanceof AuthError) return login(); report(e, 'load'); setErr((e as Error).message); setPhase('error') }
+    catch (e) { if (e instanceof AuthError) return setPhase('signin'); report(e, 'load'); setErr((e as Error).message); setPhase('error') }
     finally { clearTimeout(t) }
   }, [])
 
@@ -114,6 +103,7 @@ export default function App() {
   }, [])
 
   if (phase === 'loading') return <Splash><Spinner className="size-5" /><p className="text-sm text-muted-foreground">Betöltés…</p>{slow && <p className="text-xs text-muted-foreground">Első indításkor a SharePoint-listák és -mappák létrehozása egy percig is eltarthat.</p>}</Splash>
+  if (phase === 'signin') return <SignIn />
   if (phase === 'error') return (
     <Splash>
       <h1 className="text-base font-semibold">Nem sikerült betölteni az adatokat</h1>

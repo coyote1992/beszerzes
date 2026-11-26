@@ -1,7 +1,7 @@
 // Notification e-mails sent from the shared noreply@ mailbox through Microsoft Graph.
 // The app may send only from that mailbox (Exchange RBAC for Applications) and only to people on the Munkatársak list.
 // The server builds the message from structured fields, so a client cannot send arbitrary content or recipients.
-import { batch } from './graph.js'
+import { batch, gj } from './graph.js'
 import { appOrigin } from './session.js'
 import type { Person } from './people.js'
 
@@ -83,4 +83,19 @@ export async function sendMails(mails: Mail[]): Promise<{ sent: number; failed: 
   }
   if (failed.length) console.error('mail send failed', JSON.stringify(failed.slice(0, 5)))
   return { sent: mails.length - failed.length, failed }
+}
+
+/** The sign-in code for an outside partner. Throws when Graph refuses, so the caller can report it. */
+export async function sendLoginCode(to: string, code: string, minutes: number): Promise<void> {
+  const content = `<!doctype html><html lang="hu"><body style="margin:0;padding:24px;background:#fafafa">
+<div style="max-width:480px;margin:0 auto;background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:24px;font-family:'Segoe UI',Arial,sans-serif;font-size:14px;line-height:1.5;color:#171717">
+<p style="margin:0">A Fonte Viva Beszerzési központ belépési kódja:</p>
+<p style="margin:16px 0;font-size:28px;font-weight:600;letter-spacing:6px">${esc(code)}</p>
+<p style="margin:0">A kód ${minutes} percig érvényes, és csak egyszer használható.</p>
+<p style="margin:12px 0 0;color:#737373">Ha nem te kérted, hagyd figyelmen kívül ezt a levelet.</p>
+</div></body></html>`
+  await gj(`/users/${encodeURIComponent(SENDER())}/sendMail`, {
+    method: 'POST',
+    body: JSON.stringify({ message: { subject: `Beszerzési központ belépési kód: ${code}`, body: { contentType: 'HTML', content }, toRecipients: [{ emailAddress: { address: to } }] }, saveToSentItems: false }),
+  })
 }

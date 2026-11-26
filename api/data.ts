@@ -1,12 +1,12 @@
 import { rowToAudit } from './_lib/audit.js'
-import { access, rowToPerson } from './_lib/people.js'
+import { access, currentUser, rowToPerson } from './_lib/people.js'
 import { appData, lists, loadRows } from './_lib/schema.js'
-import { json, sessionFromRequest, unauthorized } from './_lib/session.js'
+import { json, unauthorized } from './_lib/session.js'
 
 const parse = (r: any) => { const d = appData(r); return d ? { ...d, _sp: r.id } : null }
 
 export async function GET(request: Request) {
-  const me = sessionFromRequest(request)
+  const me = await currentUser(request)
   if (!me) return unauthorized()
   try {
     const ids = await lists()

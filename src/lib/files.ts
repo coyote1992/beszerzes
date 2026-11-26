@@ -1,6 +1,15 @@
 // Uploads a file into the procurement's SharePoint folder.
 // ≤ 3.4 MB: through /api/files/upload. Larger: Graph upload session, chunks sent straight to SharePoint.
+import { S } from '@/engine/engine.js'
+
 export type Uploaded = { name: string; webUrl: string; size: number }
+
+/** Where a document opens: SharePoint for colleagues; through the app for partners signed in with an e-mail code,
+ *  who have no SharePoint access. '' when it cannot be opened. */
+export function docHref(d: { url?: string; path?: string; name?: string }): string {
+  if (S.me?.method !== 'code') return d.url || ''
+  return d.path && d.name ? `/api/files/download?path=${encodeURIComponent(d.path)}&name=${encodeURIComponent(d.name)}` : ''
+}
 
 const SMALL = 3.4 * 1024 * 1024
 const CHUNK = 5 * 1024 * 1024 // multiple of 320 KiB

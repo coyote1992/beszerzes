@@ -9,7 +9,7 @@ import { notify } from '@/engine/notify.js'
 import { closeDlg, commit, openDlg, run, setUI, useUI } from '@/lib/store'
 import { flush, loadAll } from '@/lib/sync'
 import { cleanHtml } from '@/lib/html'
-import { uploadFile } from '@/lib/files'
+import { docHref, uploadFile } from '@/lib/files'
 import { Chip, typeTone, peopleOpts } from '@/lib/ui-helpers'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -295,7 +295,7 @@ function Close({ pid }: { pid: string }) {
 function ViewDoc({ pid, id }: { pid: string; id: string }) {
   const d = P(pid).docs.find((x: any) => x.id === id)
   return <FormDialog wide kicker={dl(d.key)} title={`${d.name} · v${d.ver}`} desc={`${nm(d.by)} · ${d.ts}${d.note ? ' · ' + d.note : ''}`} noOk body={() => <>
-    {d.url ? <a href={d.url} target="_blank" rel="noreferrer" className="text-sm font-medium underline underline-offset-2">Megnyitás SharePointban ↗</a> : <span className="text-sm text-muted-foreground">A fájl a következő mentéskor kerül fel a SharePointba.</span>}
+    {docHref(d) ? <a href={docHref(d)} target="_blank" rel="noreferrer" className="text-sm font-medium underline underline-offset-2">{S.me?.method === 'code' ? 'Fájl megnyitása ↗' : 'Megnyitás SharePointban ↗'}</a> : <span className="text-sm text-muted-foreground">A fájl a következő mentéskor kerül fel a SharePointba.</span>}
     {d.content && <div className="prose-doc rounded-lg border p-4 text-sm" dangerouslySetInnerHTML={{ __html: cleanHtml(d.content) }} />}</>} />
 }
 const ccUses = (k: string) => Object.values<any>(S.cc || {}).reduce((n, c) => n + c.b.filter((b: any[]) => b[1] === 'role:' + k).length, 0)
@@ -334,7 +334,7 @@ function RoleDelete({ k }: { k: string }) {
 }
 function AddPerson() {
   return <FormDialog kicker="Beállítások" title="Munkatárs hozzáadása" ok="Hozzáadás" initial={{ name: '', email: '', title: '' }}
-    before={<Note>Fonte Viva-s kolléga az első bejelentkezéskor magától felkerül; előre felvéve már szerepkört és feladatot kaphat. <b>Külső fiók</b> (pl. @mol.hu) csak akkor léphet be, ha itt fel van véve, és az Entra-ban vendégként meg van hívva a Fonte Viva bérlőbe.</Note>}
+    before={<Note>Fonte Viva-s kolléga az első bejelentkezéskor magától felkerül; előre felvéve már szerepkört és feladatot kaphat. <b>Külső partner</b> kétféleképpen léphet be: e-mailben kapott kóddal, ha a címe szerepel a Beszerzés webhely <b>Login</b> listáján (első belépéskor magától felkerül ide), vagy Microsoft vendégfiókkal (pl. @mol.hu), ha itt fel van véve, és az Entra-ban meg van hívva a Fonte Viva bérlőbe.</Note>}
     fields={[{ name: 'name', full: true, label: 'Név' }, { name: 'email', full: true, label: 'E-mail', ph: 'nev@fonteviva.hu vagy nev@mol.hu' }, { name: 'title', full: true, label: 'Beosztás (opcionális)' }]}
     onSubmit={(v) => {
       const email = String(v.email || '').trim().toLowerCase()
